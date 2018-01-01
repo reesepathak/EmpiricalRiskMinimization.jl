@@ -31,8 +31,42 @@ function eval(L::AbsoluteLoss, X, y, theta)
 end
 
 function deriv(L::AbsoluteLoss, X, y, theta)
-    return L.weight*sum(sign.(X*theta - y) .* X, 1)'
+    return L.weight*X'*sign.(X*theta - y)
 end
+
+margin(X, y, theta) = X*theta .* y
+
+#########################################
+# Hinge Loss
+#########################################
+struct HingeLoss <: Loss
+    weight::Float64
+end
+
+HingeLoss() = HingeLoss(1.0)
+
+eval(L::HingeLoss, X, y, theta) = L.weight*sum(max.(1 - margin(X, y, theta), 0))
+
+function deriv(L::HingeLoss, X, y, theta)
+    u = y.*(1.0*(margin(X, y, theta) .<= 1.0))
+    return -L.weight*X'*u
+end
+
+#########################################
+# Logistic Loss
+#########################################
+struct LogisticLoss <: Loss
+    weight::Float64
+end
+
+LogisticLoss() = LogisticLoss(1.0)
+
+eval(L::LogisticLoss, X, y, theta) = L.weight*sum(log.(1 + exp.(-margin(X, y, theta))))
+
+function deriv(L::LogisticLoss, X, y, theta)
+    return -L.weight*X'*(y./(1 + exp.(margin(X, y, theta))))
+end
+
 
 #########################################
 # Huber Loss
