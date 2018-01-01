@@ -16,6 +16,9 @@ Pkg.clone("https://github.com/reesepathak/EmpiricalRiskMinimization.jl.git")
 
 
 ## Example usage
+The following example demonstrates regularized logistic regression with
+`EmpiricalRiskMinimization.jl`. 
+
 ```Julia
 using EmpiricalRiskMinimization
 
@@ -31,9 +34,7 @@ final_risk(model)
 weights = weight(model)
 
 # predictions
-sigm(u) = 1/(1 + exp(-u))
 y_tild = sigm.(X*weights[1:d] + weights[d + 1])
 y_pred = 1.0 * (y_tild .>= 0.5)
-accuracy = sum(1.0*(y_pred .== y))/n
-println("Accuracy: $accuracy")
+acc = sum(1.0*(y_pred .== y))/n
 ```
