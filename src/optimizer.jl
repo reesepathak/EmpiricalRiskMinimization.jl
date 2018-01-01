@@ -5,8 +5,13 @@ function minimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
     println("Solving problem. $n samples, $d features.")
     # convenience functions
     LOSS(u) = eval(L, X, y, u); GRAD(u) = deriv(L, X, y, u)
+    RISK(u) = LOSS(u) + eval(R, u)
     thetas, zetas, losses = [], [], []
-    push!(thetas, rand(d))
+    if init == nothing
+        init = rand(d)
+    end
+    assert(length(init) == d)
+    push!(thetas, init)
     push!(zetas, thetas[1])
     t = t_init
     for k = 1:max_iters
@@ -18,13 +23,13 @@ function minimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
         push!(thetas, prox(R, grad_step, t))
         FISTA_weight = (k - 1)/(k + 2)
         push!(zetas, thetas[end] + FISTA_weight *(thetas[end] - thetas[end-1]))
-        push!(losses, LOSS(thetas[end]))
+        push!(losses, RISK(thetas[end]))
         if verbose
-            println("Iteration: $k,  Loss: $(LOSS(thetas[end]))")
+            println("Iteration: $k,  Loss: $(losses[end])")
         end
-        if k > 4 && maximum(abs.(losses[end-4:end-1] - losses[end-3:end])) < 1e-4
+        if k > 4 && maximum(abs.(losses[end-4:end-1] - losses[end-3:end])) < 1e-6
             println("Done.")
-            break
+            return losses[end]
         end
     end
 end

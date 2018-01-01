@@ -9,7 +9,7 @@ export SquaredLoss, AbsoluteLoss, HuberLoss
 include("losses.jl")
 
 # Regularizers
-export L1Reg, L2Reg
+export L1Reg, L2Reg, L1L2Reg
 include("regularizers.jl")
 
 export minimize
