@@ -16,4 +16,12 @@ include("regularizers.jl")
 export minimize
 include("optimizer.jl")
 
+# Models
+export Model, fit!, status, final_risk, weight
+include("model.jl")
+
+# Utility functions
+export sigm
+include("util.jl")
+
 end # module

@@ -1,4 +1,5 @@
 abstract type Loss end
+abstract type LossNonDiff <: Loss end
 
 #########################################
 # Square Loss
@@ -20,7 +21,7 @@ end
 #########################################
 # L1 Loss
 #########################################
-struct AbsoluteLoss <: Loss
+struct AbsoluteLoss <: LossNonDiff
     weight::Float64
 end
 
@@ -39,7 +40,7 @@ margin(X, y, theta) = X*theta .* y
 #########################################
 # Hinge Loss
 #########################################
-struct HingeLoss <: Loss
+struct HingeLoss <: LossNonDiff
     weight::Float64
 end
 

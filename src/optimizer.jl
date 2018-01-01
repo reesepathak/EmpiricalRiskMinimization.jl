@@ -1,7 +1,13 @@
-function minimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
+function minimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5, init=nothing, t_init=1.0; max_iters=5000, verbose=false, tol=1e-8)
+    thetas, losses = optimize(L, R, X, y, beta, alpha, init, t_init, max_iters, verbose, tol)
+    return losses[end]
+end
+
+function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
                   init=nothing, t_init=1.0;
                   max_iters=5000, verbose=true, tol=1e-8)
     n, d = size(X)
+    decay = (typeof(L) == LossNonDiff) ? true : false
     println("Solving problem. $n samples, $d features.")
     # convenience functions
     LOSS(u) = eval(L, X, y, u); GRAD(u) = deriv(L, X, y, u)
@@ -15,6 +21,9 @@ function minimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
     push!(zetas, thetas[1])
     t = t_init
     for k = 1:max_iters
+        if k > 20 && decay
+            t /= sqrt(k)
+        end
         grad_step = zetas[end] - t*GRAD(zetas[end])
         while LOSS(grad_step) > LOSS(zetas[end]) - alpha*t*norm(GRAD(zetas[end]))^2
             t *= beta
@@ -29,7 +38,7 @@ function minimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
         end
         if k > 4 && maximum(abs.(losses[end-4:end-1] - losses[end-3:end])) < tol
             println("Done.")
-            return losses[end]
+            return thetas, losses
         end
     end
     print("Did not converge. Loss: $(losses[end])")
