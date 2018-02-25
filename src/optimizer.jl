@@ -22,7 +22,7 @@ function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
     t = t_init
     for k = 1:max_iters
         if k > 20 && decay
-            t /= sqrt(k)
+            t *= (k-1)/k
         end
         grad_step = zetas[end] - t*GRAD(zetas[end])
         while LOSS(grad_step) > LOSS(zetas[end]) - alpha*t*norm(GRAD(zetas[end]))^2
