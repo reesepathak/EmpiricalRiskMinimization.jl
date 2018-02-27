@@ -5,7 +5,7 @@ module EmpiricalRiskMinimization
 using Compat
 
 # Losses
-export SquaredLoss, AbsoluteLoss, HuberLoss, HingeLoss, LogisticLoss
+export SquaredLoss, AbsoluteLoss, HuberLoss, HingeLoss, LogisticLoss, FrobeniusLoss
 include("losses.jl")
 
 # Regularizers
@@ -13,7 +13,7 @@ export L1Reg, L2Reg, L1L2Reg
 include("regularizers.jl")
 
 # GD function
-export minimize
+export minimize, minimize_unsupervised
 include("optimizer.jl")
 
 # Models

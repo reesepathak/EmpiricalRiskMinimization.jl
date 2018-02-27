@@ -1,4 +1,5 @@
 abstract type Loss end
+abstract type LossUnsupervised <: Loss end
 abstract type LossNonDiff <: Loss end
 
 #########################################
@@ -15,7 +16,7 @@ function eval(L::SquaredLoss, X, y, theta)
 end
 
 function deriv(L::SquaredLoss, X, y, theta)
-    return L.weight*(2*X'*X*theta - 2*X'*y)
+    return L.weight*(2*X'*(X*theta - y))
 end
 
 #########################################
@@ -98,4 +99,27 @@ function deriv(L::HuberLoss, X, y, theta)
     sq_deriv = X_sq'*X_sq*theta - X_sq'*y
     abs_deriv = L.delta*sum(sign.(u) .* X_abs, 1)'
     return L.weight*(sq_deriv + abs_deriv)
+end
+
+
+#########################################
+# Frobenius norm loss
+#########################################
+
+struct FrobeniusLoss <: LossUnsupervised
+end
+
+function eval(L::FrobeniusLoss, C, X, Y)
+    return vecnorm(X*Y' - C)
+end
+
+# TODO: Find some way of more nicely enumerating these things
+function deriv(L::FrobeniusLoss, C, X, Y, which="X")
+    if which=="X"
+        return 2*(X*Y' - C)*Y
+    end
+    if which == "Y"
+        return 2*(Y*X' - C')*X
+    end
+    throw("which is defined as $(which), not one of X or Y")
 end
