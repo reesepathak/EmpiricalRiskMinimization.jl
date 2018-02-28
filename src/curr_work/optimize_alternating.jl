@@ -6,7 +6,6 @@ function eval(C, X, Y)
     return vecnorm(X*Y' - C)
 end
 
-# TODO: Find some way of more nicely enumerating these things
 function deriv(C, X, Y, which="X")
     if which == "X"
         return 2*(X*Y' - C)*Y
@@ -15,6 +14,15 @@ function deriv(C, X, Y, which="X")
         return 2*(Y*X' - C')*X
     end
     throw("which is defined as $(which), not one of X or Y")
+end
+
+function prox(C, X, Y, which="X")
+    if which != "X" && which != "Y"
+        throw("which is defined as $(which), not one of X or Y")
+    end
+    Q = which == "X" ? copy(X) : copy(Y)
+    Q[Q.<0] = 0
+    return Q
 end
 
 function optimize_pca(C, k, init=nothing, 
@@ -28,7 +36,6 @@ function optimize_pca(C, k, init=nothing,
     LOSS(u, v) = eval(C, u, v);
     GRAD_X(u, v) = deriv(C, u, v, "X")
     GRAD_Y(u, v) = deriv(C, u, v, "Y")
-
     
     theta_X, theta_Y, losses = [], [], []
     
@@ -118,14 +125,12 @@ end
 srand(1234)
 
 A = randn(1000, 500)
-
 k = 5
 
 @time x, y, loss = optimize_pca(A, k)
 
 
 println("result with loss $(loss[end])")
-
 println("Computing exact result")
 U, S, V = svd(A)
 
