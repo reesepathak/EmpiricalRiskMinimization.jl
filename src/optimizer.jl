@@ -9,7 +9,7 @@ function minimize_unsupervised(L::LossUnsupervised, X, k, beta=0.8, alpha=0.5, i
 end
 
 function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
-                  init=nothing, t_init=1.0;
+                  init=nothing, t_init=1.0,
                   max_iters=5000, verbose=true, tol=1e-8)
     n, d = size(X)
     decay = (typeof(L) == LossNonDiff) ? true : false
