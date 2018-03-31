@@ -13,7 +13,7 @@ export L1Reg, L2Reg, L1L2Reg
 include("regularizers.jl")
 
 # GD function
-export minimize, minimize_unsupervised
+export minimize
 include("optimizer.jl")
 
 # Models

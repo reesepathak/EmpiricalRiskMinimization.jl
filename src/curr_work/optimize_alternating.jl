@@ -20,7 +20,7 @@ function prox(C, X, Y, which="X")
     if which != "X" && which != "Y"
         throw("which is defined as $(which), not one of X or Y")
     end
-    Q = which == "X" ? copy(X) : copy(Y)
+    Q = (which == "X") ? copy(X) : copy(Y)
     Q[Q.<0] = 0
     return Q
 end
@@ -30,7 +30,10 @@ function optimize_pca(C, k, init=nothing,
 
     n, d = size(C)
     decay = true
-    println("Solving problem. Shape is $n by $d.")
+
+    if verbose
+        info("Solving problem. Shape is $n by $d.")
+    end
 
     # convenience functions
     LOSS(u, v) = eval(C, u, v);
@@ -48,9 +51,9 @@ function optimize_pca(C, k, init=nothing,
     end
     
     if verbose
-        println("The initial loss is $(LOSS(init_X, init_Y))")
-        println("With gradient X $(GRAD_X(init_X, init_Y))")
-        println("With gradient Y $(GRAD_Y(init_X, init_Y))")
+        info("The initial loss is $(LOSS(init_X, init_Y))")
+        info("With gradient X $(GRAD_X(init_X, init_Y))")
+        info("With gradient Y $(GRAD_Y(init_X, init_Y))")
     end
 
     assert(size(init_X)[1] == n)
@@ -105,16 +108,16 @@ function optimize_pca(C, k, init=nothing,
         push!(losses, LOSS(theta_X[end], theta_Y[end]))
 
         if verbose
-            println("Iteration: $k,  Loss: $(losses[end])")
+            info("Iteration: $k,  Loss: $(losses[end])")
         end
 
         if (!progress_x && !progress_y)
-            println("Algorithm is not making any progress... breaking.")
+            warn("Algorithm is not making any progress... breaking.")
             return theta_X, theta_Y, losses
         end
 
         if k > 4 && maximum(abs.(losses[end-4:end-1] - losses[end-3:end])) < tol
-            println("Done.")
+            info("Done.")
             return theta_X, theta_Y, losses
         end
     end

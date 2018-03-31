@@ -22,7 +22,7 @@ function fit!(M::Model, X, y; beta=0.8, alpha=0.5, init=nothing, t_init=1.0, max
         d += 1
     end
     M.param["theta"] = zeros(d)
-    opt = optimize(M.loss, M.reg, X, y, beta, alpha, init, t_init, max_iters=max_iters, verbose=verbose, tol=tol)
+    opt = EmpiricalRiskMinimization.minimize(M.loss, M.reg, X, y, beta, alpha, init, t_init, max_iters=max_iters, verbose=verbose, tol=tol)
     if opt == -1
         println("Model did not converge")
         M.status = "Failed"
