@@ -1,4 +1,4 @@
-function minimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5, init=nothing, t_init=1.0; max_iters=5000, verbose=false, tol=1e-8)
+function minimize(L::Loss, R::Regularizer, X, y; beta=0.8, alpha=0.5, init=nothing, t_init=1.0, max_iters=5000, verbose=false, tol=1e-8)
     thetas, losses = optimize(L, R, X, y, beta, alpha, init, t_init, max_iters, verbose, tol)
     return losses[end]
 end
