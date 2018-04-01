@@ -1,4 +1,5 @@
 abstract type Regularizer end
+abstract type RegularizerUnsupervised <: Regularizer end
 
 #########################################
 # L1 Regularizer
@@ -51,4 +52,27 @@ function prox(R::L1L2Reg, grad_step, t)
     thresh = lambd1^2/(1 + 2lambd2)^2
     u = (lambd1/(1 + 2lambd2)^2) * grad_step
     return coeff*(sign.(u) .* max.(0, abs.(u) - thresh))
+end
+
+#########################################
+# Trivial Matrix Regularizer
+#########################################
+struct NoReg <: RegularizerUnsupervised
+end
+
+eval(R::NoReg, X) = 0
+prox(R::NoReg, X) = X
+
+#########################################
+# Nonnegative Matrix Regularizer
+#########################################
+struct PosReg <: RegularizerUnsupervised
+end
+
+eval(R::PosReg, X) = any(X .< 0) ? Inf : 0
+
+function prox(R::PosReg, X)
+    Q = copy(X)
+    Q[Q.<0] = 0
+    return Q
 end

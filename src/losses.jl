@@ -110,7 +110,7 @@ struct FrobeniusLoss <: LossUnsupervised
 end
 
 function eval(L::FrobeniusLoss, C, X, Y)
-    return vecnorm(X*Y' - C)
+    return vecnorm(X*Y' - C)^2
 end
 
 # TODO: Find some way of more nicely enumerating these things

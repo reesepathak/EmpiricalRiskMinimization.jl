@@ -1,6 +1,8 @@
 #example usage EmpiricalRiskMinimization.jl (01-01-18)
 using EmpiricalRiskMinimization
-using Convex, SCS
+# using Convex, SCS
+
+srand(1234)
 
 # data
 n = 2000; d = 350;
@@ -34,3 +36,24 @@ y_tild = sigm.(X_tild*weights)
 y_pred = 1.0 * (y_tild .>= 0.5)
 accuracy = sum(1.0*(y_pred .== y))/n
 println("Accuracy (using Convex.jl): $accuracy")
+
+
+## Unsupervised learning
+
+# PCA by alternating minimization
+unsupervised_model = Model(FrobeniusLoss(), NoReg(), fit_intercept=false)
+
+X = randn(n, d)
+k = 1
+
+fit_unsupervised!(unsupervised_model, X, k)
+status(unsupervised_model)
+final_risk(unsupervised_model)
+
+# PCA by singular value decomposition
+U, S, V = svd(X)
+
+X_pca = U[:,1:k]*diagm(S)[1:k, 1:k]*V[:,1:k]'
+loss_svd = vecnorm(X - X_pca)^2
+
+println("Objective value (using SVD): $(loss_svd)")
