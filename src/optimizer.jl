@@ -1,3 +1,6 @@
+"""
+Minimization wrapper for supervised learning.
+"""
 function minimize(L::Loss, R::Regularizer, X, y, beta=0.8,
                   alpha=0.5, init=nothing, t_init=1e-3;
                   max_iters=5000, verbose=false, tol=1e-8)
@@ -8,6 +11,9 @@ function minimize(L::Loss, R::Regularizer, X, y, beta=0.8,
     return thetas, losses
 end
 
+"""
+Minimization wrapper for unsupervised learning.
+"""
 function minimize_unsupervised(L::LossUnsupervised, R::RegularizerUnsupervised, X, k,
                   beta=0.8, alpha=0.5, init=nothing, t_init=1.0;
                   max_iters=5000, verbose=false, tol=1e-8)
@@ -18,6 +24,12 @@ function minimize_unsupervised(L::LossUnsupervised, R::RegularizerUnsupervised, 
     return theta_X, theta_Y, losses
 end
 
+"""
+Main function in ERM package: carries out 
+accelerated proximal (sub)gradient descent. In particular, this is 
+carrying out FISTA, a particular instance of Nesterov's accelerated 
+gradient method.
+"""
 function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
                   init=nothing, t_init=1.0;
                   max_iters=5000, verbose=true, tol=1e-8)
@@ -61,7 +73,9 @@ function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
     return -1
 end
 
-
+"""
+Alternating minimization for unsupervised problems.
+"""
 function optimize_unsupervised(L::LossUnsupervised, R::RegularizerUnsupervised,
                                C, k, alpha=.5, beta=.8, init=nothing, t_init=1.0;
                                t_min=1e-15, verbose=true, max_iters=5000, tol=1e-8)

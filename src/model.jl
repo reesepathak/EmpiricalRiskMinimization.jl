@@ -8,6 +8,7 @@ mutable struct Model <: AbstractModel
     status::String
 end
 
+"Alternative constructor for the Model class, simply requiring specification of loss and regularizer."
 Model(loss, reg; fit_intercept=false) = Model(loss, reg, fit_intercept, Dict(), "No data")
 
 # Model(;loss=:required,
@@ -15,6 +16,10 @@ Model(loss, reg; fit_intercept=false) = Model(loss, reg, fit_intercept, Dict(), 
 #        fit_intercept=false)
 #        = Model(loss, reg, fit_intercept)
 
+"""
+Function applies changes to the model object by carrying out empirical risk minimization. Requires 
+input of data
+"""
 function fit!(M::Model, X, y; beta=0.8, alpha=0.5, init=nothing, t_init=1.0, max_iters=5000, verbose=false, tol=1e-4)
     n, d = size(X)
     if M.intercept
@@ -35,6 +40,9 @@ function fit!(M::Model, X, y; beta=0.8, alpha=0.5, init=nothing, t_init=1.0, max
     M.status = "Converged"
 end
 
+"""
+Function fits an unsupervised model. Will be deprecated in next version. 
+"""
 function fit_unsupervised!(M::Model, X, k; beta=0.8, alpha=0.5, init=nothing, t_init=1.0, max_iters=5000, verbose=false, tol=1e-4)
     n, d = size(X)
     if M.intercept
@@ -61,11 +69,17 @@ function fit_unsupervised!(M::Model, X, k; beta=0.8, alpha=0.5, init=nothing, t_
     M.status = "Converged"
 end
 
+"""
+Prints and returns the status of the model.
+"""
 function status(M::Model)
     println("The model status is: $(M.status).")
     return M.status
 end
 
+"""
+Pritns and returns the final training risk of the model.
+"""
 function final_risk(M::Model)
     assert(M.status == "Converged")
     final_risk = M.param["loss_history"][end]
@@ -73,7 +87,11 @@ function final_risk(M::Model)
     return final_risk
 end
 
-function weight(M::Model)
+"""
+Returns model parameters if the mdoel has converged (i.e., 
+if it has been properly trained.)
+"""
+function parameters(M::Model)
     assert(M.status == "Converged")
     weights = M.param["theta"]
     return weights
