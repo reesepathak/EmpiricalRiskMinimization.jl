@@ -61,7 +61,8 @@ println("Convex: $loss_CVX, ERM: $loss_ERM")
 
 # Logistic regression test 
 n = 2000; d = 350;
-model = Model(LogisticLoss(), L2Reg(0.1), fit_intercept=true);
+X = randn(n, d); X = randn(n, d); y = (sign.(randn(n) - 0.5) + 1)/2; lambd = rand();
+model = Model(LogisticLoss(), L2Reg(lambd), fit_intercept=true);
 fit!(model, X, y)
 status(model); 
 final_risk(model);
@@ -70,7 +71,7 @@ weights = parameters(model);
 y_tild = sigm.(X*weights[1:d] + weights[d + 1])
 y_pred = 1.0 * (y_tild .>= 0.5)
 acc_ERM = sum(1.0*(y_pred .== y))/n
-compare w/ cvx
+# compare w/ cvx
 theta = Variable(d + 1)
 X_tild = [X ones(n)]
 cvx_problem = Convex.minimize(logisticloss(-y.*(X_tild*theta)))
