@@ -36,9 +36,6 @@ function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
     push!(zetas, thetas[1])
     t = t_init
     for k = 1:max_iters
-        # if k > 20 && decay
-        #     t *= (k-1)/k
-        # end
         lambd = 2/(k + 1)
         phi = (1 - lambd) * thetas[end] + lambd*zetas[end]
         z = PROX(phi - t*GRAD(phi), t)
