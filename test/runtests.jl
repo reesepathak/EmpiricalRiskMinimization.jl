@@ -55,7 +55,7 @@ cvx_problem = Convex.minimize(cvx_objective)
 solve!(cvx_problem, ECOSSolver(verbose=false, max_iters=10000, eps=1e-9), verbose=false)
 loss_CVX = cvx_problem.optval
 println("Convex: $loss_CVX, ERM: $loss_ERM")
-# @test abs(loss_CVX - loss_ERM) < TOL
+@test abs(loss_CVX - loss_ERM) < TOL
 
 n = 500; d = 200;
 X = randn(n, d); y = randn(n); lambd1 = rand(); lambd2 = rand();
@@ -67,7 +67,7 @@ cvx_problem = Convex.minimize(cvx_objective)
 solve!(cvx_problem, SCSSolver(verbose=false, max_iters=10000, eps=1e-9), verbose=false)
 loss_CVX = cvx_problem.optval
 println("Convex: $loss_CVX, ERM: $loss_ERM")
-# @test abs(loss_CVX - loss_ERM) < TOL
+@test abs(loss_CVX - loss_ERM) < TOL
 
 
 # Matrix factorization test

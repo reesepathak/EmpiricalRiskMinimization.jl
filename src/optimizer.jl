@@ -37,7 +37,7 @@ function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
     t = t_init
     for k = 1:max_iters
         if k > 20 && decay
-            t *= (k-1)/k
+            t *= sqrt(k-1)/sqrt(k)
         end
         grad_step = zetas[end] - t*GRAD(zetas[end])
         while LOSS(grad_step) > LOSS(zetas[end]) - alpha*t*norm(GRAD(zetas[end]))^2
@@ -45,7 +45,7 @@ function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
             grad_step = zetas[end] - t*GRAD(zetas[end])
         end
         push!(thetas, prox(R, grad_step, t))
-        FISTA_weight = k/(k+3) #(k - 1)/(k + 2)
+        FISTA_weight = (k-1)/(k+2) #(k - 1)/(k + 2)
         push!(zetas, thetas[end] + FISTA_weight *(thetas[end] - thetas[end-1]))
         push!(losses, RISK(thetas[end]))
         if verbose
