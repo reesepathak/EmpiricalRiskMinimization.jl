@@ -39,7 +39,8 @@ function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
         lambd = 2/(k + 1)
         phi = (1 - lambd) * thetas[end] + lambd*zetas[end]
         z = PROX(phi - t*GRAD(phi), t)
-        while LOSS(z) > LOSS(phi) + dot(GRAD(phi), z - phi) + 1/(2t)norm(z - y)^2
+        print(z)
+        while LOSS(z) > LOSS(phi) + dot(GRAD(phi), z - phi) + 1/(2t)*norm(z - y)^2
             t *= beta
             z = PROX(phi - t*GRAD(phi), t)
         end 
