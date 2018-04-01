@@ -65,7 +65,7 @@ model = Model(LogisticLoss(), L2Reg(0.1), fit_intercept=true);
 fit!(model, X, y)
 status(model); 
 final_risk(model);
-weights = weight(model);
+weights = parameters(model);
 # predictions
 y_tild = sigm.(X*weights[1:d] + weights[d + 1])
 y_pred = 1.0 * (y_tild .>= 0.5)
