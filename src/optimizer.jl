@@ -26,7 +26,7 @@ function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
     println("Solving problem. $n samples, $d features.")
     # convenience functions
     LOSS(u) = eval(L, X, y, u); GRAD(u) = deriv(L, X, y, u)
-    RISK(u) = LOSS(u) + eval(R, u)
+    RISK(u) = LOSS(u) + eval(R, u); PROX(u, t) = prox(R, u, t)
     thetas, zetas, losses = [], [], []
     if init == nothing
         init = rand(d)
@@ -36,17 +36,18 @@ function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
     push!(zetas, thetas[1])
     t = t_init
     for k = 1:max_iters
-        if k > 20 && decay
-            t *= (k-1)/k
-        end
-        grad_step = zetas[end] - t*GRAD(zetas[end])
-        while LOSS(grad_step) > LOSS(zetas[end]) - alpha*t*norm(GRAD(zetas[end]))^2
+        # if k > 20 && decay
+        #     t *= (k-1)/k
+        # end
+        lambd = 2/(k + 1)
+        phi = (1 - lambd) * thetas[end] + lambd*zetas[end]
+        z = PROX(phi - t*GRAD(phi), t)
+        while LOSS(z) > LOSS(phi) + dot(GRAD(phi), z - phi) + 1/(2t)norm(z - y)^2
             t *= beta
-            grad_step = zetas[end] - t*GRAD(zetas[end])
-        end
-        push!(thetas, prox(R, grad_step, t))
-        FISTA_weight = k/(k+3) #(k - 1)/(k + 2)
-        push!(zetas, thetas[end] + FISTA_weight *(thetas[end] - thetas[end-1]))
+            z = PROX(phi - t*GRAD(phi), t)
+        end 
+        push!(thetas, z)
+        push!(zetas, thetas[end - 1] + 1/lambd * (thetas[end] - thetas[end-1]))
         push!(losses, RISK(thetas[end]))
         if verbose
             println("Iteration: $k,  Loss: $(losses[end])")
