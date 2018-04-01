@@ -17,7 +17,7 @@ export minimize, minimize_unsupervised
 include("optimizer.jl")
 
 # Models
-export Model, fit!, fit_unsupervised!, status, final_risk, weight
+export Model, fit!, fit_unsupervised!, status, final_risk, parameters
 include("model.jl")
 
 # Utility functions
