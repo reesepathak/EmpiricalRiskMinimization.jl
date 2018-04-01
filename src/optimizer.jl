@@ -37,11 +37,12 @@ function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
     t = t_init
     for k = 1:max_iters
         if k > 20 && decay
-            t *= sqrt(k-1)/sqrt(k)
+            # t *= sqrt(k-1)/sqrt(k)
         end
         grad_step = zetas[end] - t*GRAD(zetas[end])
         while LOSS(grad_step) > LOSS(zetas[end]) - alpha*t*norm(GRAD(zetas[end]))^2
             t *= beta
+            println(t)
             grad_step = zetas[end] - t*GRAD(zetas[end])
         end
         push!(thetas, prox(R, grad_step, t))
