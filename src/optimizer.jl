@@ -1,5 +1,5 @@
 function minimize(L::Loss, R::Regularizer, X, y, beta=0.8,
-                  alpha=0.5, init=nothing, t_init=1.0;
+                  alpha=0.5, init=nothing, t_init=1e-3;
                   max_iters=5000, verbose=false, tol=1e-8)
 
     thetas, losses = optimize(L, R, X, y, beta, alpha,
@@ -36,11 +36,13 @@ function optimize(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
     push!(zetas, thetas[1])
     t = t_init
     for k = 1:max_iters
+        if decay
+            t /= sqrt(k)
+        end
         lambd = 2/(k + 1)
         phi = (1 - lambd) * thetas[end] + lambd*zetas[end]
         z = PROX(phi - t*GRAD(phi), t)
-        print(length(z), length(phi))
-        while LOSS(z) > LOSS(phi) + dot(GRAD(phi), z - phi) + 1/(2t)*norm(z - y)^2
+        while LOSS(z) > LOSS(phi) + dot(GRAD(phi), z - phi) + 1/(2t)*norm(z - phi)^2
             t *= beta
             z = PROX(phi - t*GRAD(phi), t)
         end 
