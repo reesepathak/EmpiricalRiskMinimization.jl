@@ -13,7 +13,10 @@ Currently this package is only available via GitHub (though it soon will be subm
 ```Julia
 Pkg.clone("https://github.com/reesepathak/EmpiricalRiskMinimization.jl.git")
 ```
+## Documentation 
+We are working on providing more complete documentation. In the meantime, refer to the usage examples below and in the repository. 
 
+Find the most recent documentation [here](https://reesepathak.github.io/EmpiricalRiskMinimization.jl/stable)
 
 ## Example usage
 The following example demonstrates regularized logistic regression with
@@ -31,7 +34,7 @@ model = Model(LogisticLoss(), L2Reg(0.1), fit_intercept=true);
 fit!(model, X, y)
 status(model)
 final_risk(model)
-weights = weight(model)
+weights = parameters(model)
 
 # predictions
 y_tild = sigm.(X*weights[1:d] + weights[d + 1])
