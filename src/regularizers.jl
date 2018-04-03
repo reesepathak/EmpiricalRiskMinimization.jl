@@ -1,38 +1,30 @@
+
 abstract type Regularizer end
-abstract type RegularizerUnsupervised <: Regularizer end
 
 #########################################
 # L1 Regularizer
 #########################################
-struct L1Reg <: Regularizer
-    weight::Float64
-end
+struct L1Reg <: Regularizer end
 
-L1Reg() = L1Reg(1.0)
-
-eval(R::L1Reg, u) = R.weight * norm(u, 1)
+eval(R::L1Reg, u) = norm(u, 1)
 
 function prox(R::L1Reg, grad_step, t)
-    scale = R.weight*t
-    return sign.(grad_step).*max.(0, abs.(grad_step) - scale)
+    return sign.(grad_step).*max.(0, abs.(grad_step) - t)
 end
 
 #########################################
 # L2 Regularizer
 #########################################
-struct L2Reg <: Regularizer
-    weight::Float64
-end
+struct L2Reg <: Regularizer end
 
-L2Reg() = L2Reg(1.0)
-
-eval(R::L2Reg, u) = R.weight * norm(u)^2
+eval(R::L2Reg, u) = dot(u,u)
 
 function prox(R::L2Reg, grad_step, t)
-    scale = R.weight*t
     n = norm(grad_step)
-    if n == 0 return zeros(length(grad_step)) end
-    return max((n - scale)/n, 0) * grad_step
+    if n == 0
+        return zeros(length(grad_step))
+    end
+    return max((n - t)/n, 0) * grad_step
 end
 
 #########################################
@@ -52,27 +44,4 @@ function prox(R::L1L2Reg, grad_step, t)
     thresh = lambd1^2/(1 + 2lambd2)^2
     u = (lambd1/(1 + 2lambd2)^2) * grad_step
     return coeff*(sign.(u) .* max.(0, abs.(u) - thresh))
-end
-
-#########################################
-# Trivial Matrix Regularizer
-#########################################
-struct NoReg <: RegularizerUnsupervised
-end
-
-eval(R::NoReg, X) = 0
-prox(R::NoReg, X) = X
-
-#########################################
-# Nonnegative Matrix Regularizer
-#########################################
-struct PosReg <: RegularizerUnsupervised
-end
-
-eval(R::PosReg, X) = any(X .< 0) ? Inf : 0
-
-function prox(R::PosReg, X)
-    Q = copy(X)
-    Q[Q.<0] = 0
-    return Q
 end

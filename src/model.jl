@@ -1,73 +1,213 @@
-abstract type AbstractModel end
 
-mutable struct Model <: AbstractModel
+
+##############################################################################
+# Data
+
+# Note both X and Y are 2 dimensional Arrays
+
+mutable struct Mldata
+    Xtrain
+    Ytrain
+    Xtest
+    Ytest
+    Xembed
+    Yembed
+    # feature list is a list of the columns of X that are of interest
+    featurelist
+end
+
+function Xtrain(D::Mldata)
+    if D.featurelist == nothing
+        return D.Xtrain
+    end
+    return D.Xtrain[:, D.featurelist]
+end
+
+function Xtest(D::Mldata)
+    if D.featurelist == nothing
+        return D.Xtest
+    end
+    return D.Xtest[:, D.featurelist]
+end
+
+Ytrain(D::Mldata) = D.Ytrain
+Ytest(D::Mldata) = D.Ytest
+
+
+
+function setfeatures(D::Mldata, f)
+    if f == "all"
+        D.featurelist = nothing
+    else
+        D.featurelist = f
+    end
+end
+    
+
+
+# apply embeddings
+function Mldata(U, V; Xembed = false, Yembed = false, trainfrac=0.5)
+    if Xembed == false
+        Xembed = [AppendOne(), Standardize()]
+    end
+    if Yembed == false
+        Yembed = [Standardize()]
+    end
+    Y = embed(Yembed, matrix(V))
+    X = embed(Xembed, matrix(U))
+    Xtrain, Ytrain, Xtest, Ytest = splittestandtrain(X, Y, trainfrac)        
+    d = Mldata(Xtrain, Ytrain, Xtest, Ytest, Xembed, Yembed, nothing)
+    return d
+end
+
+# split data
+function splittestandtrain(X, Y, trainfrac)
+    # split into test and train
+    srand(1)
+    testrows = Int64[]
+    trainrows = Int64[]
+    for i=1:size(X,1)
+        if rand()>trainfrac
+            push!(testrows,i)
+        else
+            push!(trainrows,i)
+        end
+    end
+    Xtrain = X[trainrows,:]
+    Ytrain = Y[trainrows,:]
+    Xtest = X[testrows,:]
+    Ytest = Y[testrows,:]
+    return Xtrain, Ytrain, Xtest, Ytest
+end
+
+
+##############################################################################
+
+mutable struct Model
+    D::Mldata
     loss::Loss
-    reg::Regularizer
-    intercept::Bool
-    param::Dict{Any, Any}
+    regularizer::Regularizer
+    solver::Solver
+    theta
+    lambda
+    trainloss
+    testloss
+    lambdamin
+    imin
+    istrained::Bool
+    hasregpath::Bool
+
+    # todo: each solve on the regularization path should have its own status
     status::String
 end
 
-"Alternative constructor for the Model class, simply requiring specification of loss and regularizer."
-Model(loss, reg; fit_intercept=false) = Model(loss, reg, fit_intercept, Dict(), "No data")
-
-# Model(;loss=:required,
-#        reg=:required,
-#        fit_intercept=false)
-#        = Model(loss, reg, fit_intercept)
+setfeatures(M::Model, f) = setfeatures(M.D, f)
 
 """
-Function applies changes to the model object by carrying out empirical risk minimization. Requires 
-input of data
+Alternative constructor for the Model class, simply requiring 
+specification of data, loss and regularizer.
 """
-function fit!(M::Model, X, y; beta=0.8, alpha=0.5, init=nothing, t_init=1.0, max_iters=5000, verbose=false, tol=1e-4)
-    n, d = size(X)
-    if M.intercept
-        X = [X ones(n)]
-        d += 1
-    end
-    M.param["theta"] = zeros(d)
-    opt = EmpiricalRiskMinimization.minimize(M.loss, M.reg, X, y, beta, alpha, init, t_init, max_iters=max_iters, verbose=verbose, tol=tol)
-    if opt == -1
-        println("Model did not converge")
-        M.status = "Failed"
-        return
-    end
-    thetas, losses = opt
-    M.param["theta_history"] = thetas
-    M.param["theta"] = M.param["theta_history"][end]
-    M.param["loss_history"] = losses
-    M.status = "Converged"
+function Model(D, loss, reg)
+    return  Model(D, loss, reg, DefaultSolver(),
+                  0,0,0,0,0,0,
+                  false, false, "initial status")
 end
 
-"""
-Function fits an unsupervised model. Will be deprecated in next version. 
-"""
-function fit_unsupervised!(M::Model, X, k; beta=0.8, alpha=0.5, init=nothing, t_init=1.0, max_iters=5000, verbose=false, tol=1e-4)
-    n, d = size(X)
-    if M.intercept
-        X = [X ones(n)]
-        d += 1
+##############################################################################
+# predict
+
+
+function gettheta(M::Model)
+    if !M.istrained
+        error("Attempt to retrieve theta from untrained ERM")
     end
-
-    M.param["theta"] = Dict("X"=> zeros(n, k), "Y"=>zeros(d, k))
-
-    opt = EmpiricalRiskMinimization.minimize_unsupervised(M.loss, M.reg, X, k, beta, alpha, init, t_init, max_iters=max_iters, verbose=verbose, tol=tol)
-    if opt == -1
-        println("Model did not converge")
-        M.status = "Failed"
-        return
+    if M.hasregpath
+        return M.theta[M.imin]
     end
-
-    theta_X, theta_Y, losses = opt
-
-    M.param["theta_history"] = Dict("X"=> theta_X, "Y"=>theta_Y)
-    M.param["theta"] = Dict("X"=>M.param["theta_history"]["X"][end],
-                            "Y"=>M.param["theta_history"]["Y"][end])
-    M.param["loss_history"] = losses
-
-    M.status = "Converged"
+    return M.theta
 end
+
+function getlambda(M::Model)
+    if !M.istrained
+        error("Attempt to retrieve lambda from untrained ERM")
+    end
+    if M.hasregpath
+        return M.lambda[M.imin]
+    end
+    return M.lambda
+end
+
+
+predict(M::Model, X::Array{Float64,2}, theta) = X*theta
+
+predicttest(M::Model, theta) = predict(M, Xtest(M.D), theta)
+predicttrain(M::Model, theta) = predict(M, Xtrain(M.D), theta)
+
+predicttest(M::Model) = predict(M, Xtest(M.D), gettheta(M))
+predicttrain(M::Model) = predict(M, Xtrain(M.D), gettheta(M))
+
+predictx(M::Model, x) = predict(M, x, gettheta(M))
+
+function predictu(M::Model, u::Array{Float64,2})
+    x = embed(M.D.Xembed, u)
+    predictx(M::Model, x)
+end
+
+
+##############################################################################
+# fit
+
+
+function trainx(M::Model,  lambda::Number)
+    theta = solve(M.solver, M.loss, M.regularizer, Xtrain(M.D), M.D.Ytrain, lambda)
+    trainloss = loss(M.loss, predicttrain(M, theta), M.D.Ytrain)
+    testloss = loss(M.loss,  predicttest(M, theta), M.D.Ytest)
+    return theta, trainloss, testloss
+end
+
+function train(M::Model, lambda::Number; quiet=false)
+    if isa(M.solver, DefaultSolver)
+        M.solver = getsolver(M.loss, M.regularizer)
+    end
+    M.lambda = lambda
+    M.theta, M.trainloss, M.testloss = trainx(M,  lambda)
+    M.istrained = true
+    M.hasregpath = false
+    if !quiet
+        @printf("lambda = %f, training loss = %.4f\n", lambda, M.trainloss)
+        @printf("lambda = %f, test loss = %.4f\n", lambda, M.testloss)
+    end
+end
+
+train(M::Model; kwargs...) = train(M, 1e-10; kwargs...)    
+
+function train(M::Model, lambda::Array; quiet=false, kwargs...)
+    if isa(M.solver, DefaultSolver)
+        M.solver = getsolver(M.loss, M.regularizer)
+    end
+    nl = length(lambda)
+    M.lambda = lambda
+    M.theta = Array{Any}(nl)
+    M.trainloss = zeros(nl)
+    M.testloss = zeros(nl)
+    for i=1:nl
+        M.theta[i], M.trainloss[i], M.testloss[i] = trainx(M, lambda[i])
+    end
+    M.imin =  findmin(M.testloss)[2]
+    M.lambdamin = M.lambda[M.imin]
+    M.istrained = true
+    M.hasregpath = true
+    if !quiet
+        @printf("optimal lambda = %.3f\n", M.lambdamin)
+        @printf("optimal test loss = %.3f\n", M.testloss[M.imin])
+    end
+end
+
+
+##############################################################################
+
+
+
 
 """
 Prints and returns the status of the model.
@@ -77,22 +217,25 @@ function status(M::Model)
     return M.status
 end
 
+
+
 """
-Pritns and returns the final training risk of the model.
+Returns the final test loss of the model.
 """
-function final_risk(M::Model)
-    assert(M.status == "Converged")
-    final_risk = M.param["loss_history"][end]
-    println("Final risk: $(final_risk)")
-    return final_risk
+function testloss(M::Model)
+    return M.testloss
 end
 
 """
-Returns model parameters if the mdoel has converged (i.e., 
-if it has been properly trained.)
+Returns the final training loss of the model.
 """
-function parameters(M::Model)
-    assert(M.status == "Converged")
-    weights = M.param["theta"]
-    return weights
+function trainloss(M::Model)
+    return M.trainloss
+end
+
+"""
+Returns model parameters 
+"""
+function thetaopt(M::Model)
+    return M.theta
 end
