@@ -48,7 +48,7 @@ end
 # apply embeddings
 function Mldata(U, V; Xembed = false, Yembed = false, trainfrac=0.5)
     if Xembed == false
-        Xembed = [AppendOne(), Standardize()]
+        Xembed = [AppendOneEmbed(), Standardize()]
     end
     if Yembed == false
         Yembed = [Standardize()]
@@ -63,7 +63,6 @@ end
 # split data
 function splittestandtrain(X, Y, trainfrac)
     # split into test and train
-    srand(1)
     testrows = Int64[]
     trainrows = Int64[]
     for i=1:size(X,1)
@@ -102,6 +101,8 @@ mutable struct Model
 end
 
 setfeatures(M::Model, f) = setfeatures(M.D, f)
+Ytest(M::Model) = Ytest(M.D)
+Ytrain(M::Model) = Ytrain(M.D)
 
 """
 Alternative constructor for the Model class, simply requiring 
@@ -238,4 +239,15 @@ Returns model parameters
 """
 function thetaopt(M::Model)
     return M.theta
+end
+
+
+function thetamatrix(M::Model)
+    r = length(M.lambda)
+    d = length(M.theta[1])
+    T = zeros(d,r)
+    for i=1:r
+        T[:,i] = M.theta[i]
+    end
+    return T'
 end

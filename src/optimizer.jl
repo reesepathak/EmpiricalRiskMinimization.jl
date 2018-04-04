@@ -46,6 +46,10 @@ function ls(X,Y)
 end
 
 
+#
+# this doesn't regularize the first component of theta
+# todo: need to make this optional
+#
 function lsreg(X, Y, lambda)
     d = size(X,2)
     A = eye(d)

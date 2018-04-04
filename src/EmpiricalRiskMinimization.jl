@@ -22,7 +22,7 @@ include("optimizer.jl")
 
 # Models
 export Model, Mldata, train, status, predicttest, predicttrain, predictu, setfeatures
-export thetaopt, trainloss, testloss
+export thetaopt, trainloss, testloss, Ytrain, Ytest, thetamatrix
 include("model.jl")
 
 # Utility functions
