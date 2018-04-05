@@ -27,8 +27,9 @@ getsolver(L::Loss, R::Regularizer) = Fista()
 ##############################################################################
 # QR for quadratic case
 
-function solve(s::QRSolver, L::SquareLoss, R::L2Reg, X, Y, lambda, theta_guess=nothing)
-    return lsreg(X, Y, lambda)
+function solve(s::QRSolver, L::SquareLoss, R::L2Reg, regweights,
+               X, Y, lambda, theta_guess=nothing)
+    return lsreg(X, Y, lambda, regweights)
 end
 
 
@@ -50,10 +51,9 @@ end
 # this doesn't regularize the first component of theta
 # todo: need to make this optional
 #
-function lsreg(X, Y, lambda)
+function lsreg(X, Y, lambda, regweights)
     d = size(X,2)
-    A = eye(d)
-    A[1,1]=0
+    A = diagm(regweights)
     Xh = [X; sqrt(lambda)*A]
     Yh = [Y; zeros(d)]
     theta = ls(Xh,Yh)
@@ -62,7 +62,8 @@ end
 ##############################################################################
 # Fista
 
-function solve(s::FistaSolver, L::Loss, R::Regularizer, X, Y, lambda, theta_guess=nothing)
+function solve(s::FistaSolver, L::Loss, R::Regularizer, regweights,
+               X, Y, lambda, theta_guess=nothing)
     beta=0.8
     alpha=0.5
     init=theta_guess

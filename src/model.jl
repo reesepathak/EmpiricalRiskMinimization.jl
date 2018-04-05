@@ -14,6 +14,8 @@ mutable struct Mldata
     Yembed
     # feature list is a list of the columns of X that are of interest
     featurelist
+    # true if the first feature is 1
+    hasconstfeature::Bool
 end
 
 function Xtrain(D::Mldata)
@@ -29,6 +31,7 @@ function Xtest(D::Mldata)
     end
     return D.Xtest[:, D.featurelist]
 end
+
 
 Ytrain(D::Mldata) = D.Ytrain
 Ytest(D::Mldata) = D.Ytest
@@ -46,32 +49,49 @@ end
 
 
 # apply embeddings
-function Mldata(U, V; Xembed = false, Yembed = false, trainfrac=0.5)
+function Mldata(U, V; Xembed = false, Yembed = false, trainfrac=0.5, splitmethod=0)
     if Xembed == false
         Xembed = [AppendOneEmbed(), Standardize()]
     end
     if Yembed == false
         Yembed = [Standardize()]
     end
+    hasconstfeature = false
+    if isa(Xembed[1], AppendOneEmbed)
+        hasconstfeature = true
+    end
+    
     Y = embed(Yembed, matrix(V))
     X = embed(Xembed, matrix(U))
-    Xtrain, Ytrain, Xtest, Ytest = splittestandtrain(X, Y, trainfrac)        
-    d = Mldata(Xtrain, Ytrain, Xtest, Ytest, Xembed, Yembed, nothing)
+    Xtrain, Ytrain, Xtest, Ytest = splittestandtrain(X, Y;
+                                                     trainfrac=trainfrac,
+                                                     splitmethod=splitmethod)        
+    d = Mldata(Xtrain, Ytrain, Xtest, Ytest, Xembed, Yembed, nothing, hasconstfeature)
     return d
 end
 
 # split data
-function splittestandtrain(X, Y, trainfrac)
+function splittestandtrain(X, Y; trainfrac=0.5, splitmethod=0)
     # split into test and train
-    testrows = Int64[]
-    trainrows = Int64[]
-    for i=1:size(X,1)
-        if rand()>trainfrac
-            push!(testrows,i)
-        else
-            push!(trainrows,i)
+    if splitmethod == 0
+        n = size(X,1)
+        ntrain = convert(Int64, round(trainfrac*n))
+        p = randperm(n)
+        trainrows = p[1:ntrain]
+        testrows = p[ntrain+1:n]
+    else
+        # pick by Bernoulli
+        testrows = Int64[]
+        trainrows = Int64[]
+        for i=1:size(X,1)
+            if rand()>trainfrac
+                push!(testrows,i)
+            else
+                push!(trainrows,i)
+            end
         end
     end
+    
     Xtrain = X[trainrows,:]
     Ytrain = Y[trainrows,:]
     Xtest = X[testrows,:]
@@ -93,24 +113,38 @@ mutable struct Model
     testloss
     lambdamin
     imin
+    regweights   # e.g. regularization = sum_i regweights(i) \abs(\theta_i)
+                 # so we can set regweights(1) = 0 when x_1 = 1
     istrained::Bool
     hasregpath::Bool
+    
 
     # todo: each solve on the regularization path should have its own status
     status::String
+
+
 end
 
 setfeatures(M::Model, f) = setfeatures(M.D, f)
 Ytest(M::Model) = Ytest(M.D)
 Ytrain(M::Model) = Ytrain(M.D)
+Xtest(M::Model) = Xtest(M.D)
+Xtrain(M::Model) = Xtrain(M.D)
 
 """
 Alternative constructor for the Model class, simply requiring 
 specification of data, loss and regularizer.
 """
 function Model(D, loss, reg)
+    # dimension of theta
+    n = size(Xtrain(D),2)
+    regweights = ones(n)
+    if D.hasconstfeature
+        regweights[1] = 0
+    end
     return  Model(D, loss, reg, DefaultSolver(),
                   0,0,0,0,0,0,
+                  regweights,
                   false, false, "initial status")
 end
 
@@ -160,7 +194,8 @@ end
 
 
 function trainx(M::Model,  lambda::Number)
-    theta = solve(M.solver, M.loss, M.regularizer, Xtrain(M.D), M.D.Ytrain, lambda)
+    theta = solve(M.solver, M.loss, M.regularizer, M.regweights,
+                  Xtrain(M.D), M.D.Ytrain, lambda)
     trainloss = loss(M.loss, predicttrain(M, theta), M.D.Ytrain)
     testloss = loss(M.loss,  predicttest(M, theta), M.D.Ytest)
     return theta, trainloss, testloss
@@ -214,7 +249,19 @@ end
 Prints and returns the status of the model.
 """
 function status(M::Model)
-    println("The model status is: $(M.status).")
+    #println("The model status is: $(M.status).")
+    println("training samples: ", length(Ytrain(M)))
+    println("test samples: ", length(Ytest(M)))
+    if M.istrained
+        if M.hasregpath
+            println("optimal lambda: ",  M.lambdamin)
+            println("optimal test loss: ", M.testloss[M.imin])
+        else
+            println("training  loss: ", trainloss(M))
+            println("test loss: ", testloss(M))
+        end
+    end
+    
     return M.status
 end
 
