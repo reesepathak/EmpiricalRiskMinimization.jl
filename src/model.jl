@@ -38,7 +38,7 @@ Ytest(D::Mldata) = D.Ytest
 
 
 
-function setfeatures(D::Mldata, f)
+function setfeaturesx(D::Mldata, f)
     if f == "all"
         D.featurelist = nothing
     else
@@ -77,8 +77,8 @@ function splittestandtrain(X, Y; trainfrac=0.5, splitmethod=0)
         n = size(X,1)
         ntrain = convert(Int64, round(trainfrac*n))
         p = randperm(n)
-        trainrows = p[1:ntrain]
-        testrows = p[ntrain+1:n]
+        trainrows = sort(p[1:ntrain])
+        testrows = sort(p[ntrain+1:n])
     else
         # pick by Bernoulli
         testrows = Int64[]
@@ -125,7 +125,21 @@ mutable struct Model
 
 end
 
-setfeatures(M::Model, f) = setfeatures(M.D, f)
+function getregweights(D::Mldata)
+    n = size(Xtrain(D),2)
+    regweights = ones(n)
+    if D.hasconstfeature
+        regweights[1] = 0
+    end
+    return regweights
+end
+
+function setfeatures(M::Model, f)
+    setfeaturesx(M.D, f)
+    M.regweights = getregweights(M.D)
+end
+
+
 Ytest(M::Model) = Ytest(M.D)
 Ytrain(M::Model) = Ytrain(M.D)
 Xtest(M::Model) = Xtest(M.D)
@@ -137,14 +151,9 @@ specification of data, loss and regularizer.
 """
 function Model(D, loss, reg)
     # dimension of theta
-    n = size(Xtrain(D),2)
-    regweights = ones(n)
-    if D.hasconstfeature
-        regweights[1] = 0
-    end
     return  Model(D, loss, reg, DefaultSolver(),
                   0,0,0,0,0,0,
-                  regweights,
+                  getregweights(D),
                   false, false, "initial status")
 end
 
