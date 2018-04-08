@@ -75,7 +75,6 @@ function solve(s::FistaSolver, L::Loss, R::Regularizer, regweights,
                 max_iters=max_iters, tol=tol)
     
     if optstatus == -1
-        M.status = "Failed"
         return
     end
     thetas, losses = opt

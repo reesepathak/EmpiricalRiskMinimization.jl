@@ -21,7 +21,8 @@ export minimize, minimize_unsupervised
 include("optimizer.jl")
 
 # Models
-export Model, Mldata, train, status, predicttest, predicttrain, predictu, setfeatures
+export Model, Mldata, FoldedData, train, status
+export predicttest, predicttrain, predictu, setfeatures
 export thetaopt, trainloss, testloss, Ytrain, Ytest, Xtrain, Xtest, thetamatrix
 include("model.jl")
 
