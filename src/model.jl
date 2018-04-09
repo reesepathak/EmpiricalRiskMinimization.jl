@@ -108,17 +108,6 @@ function getfoldrows(n, nfolds)
     return foldrows
 end
 
-function FoldedData(U, V, nfolds; Xembed = false, Yembed = false)
-    Xall, Yall, Xembed, Yembed, hasconstfeature = embed(U, V, Xembed, Yembed)
-    n = size(Xall,1)
-    X = Any[]
-    Y = Any[]
-    for i=1:nfolds
-        push!(X, Xall[foldrows[i], :])
-        push!(Y, Yall[foldrows[i], :])
-    end
-    d = FoldedData(X, Y, nfolds, nothing, hasconstfeature)
-end
     
 function splitrows(n, trainfrac; splitmethod=0)
     if splitmethod == 0
@@ -184,10 +173,6 @@ function trainpoint(M::Model, lambda::Number; quiet=false)
     M.theta, M.trainloss, M.testloss = trainx(M,  lambda)
     M.istrained = true
     M.hasregpath = false
-    if !quiet
-        @printf("lambda = %f, training loss = %.4f\n", lambda, M.trainloss)
-        @printf("lambda = %f, test loss = %.4f\n", lambda, M.testloss)
-    end
 end
 
 function trainfolds(M::Model, lambda::Number; quiet=false)
@@ -206,34 +191,18 @@ function trainfolds(M::Model, lambda::Number; quiet=false)
 end
 
 
-function train(M::Model, lambda::Number; quiet=false)
-    if isa(M.D, FoldedData)
-        trainfolds(M)
-    else
-        trainpoint(M, lambda; quiet=quiet)
-    end
-end
-
 train(M::Model; kwargs...) = train(M, 1e-10; kwargs...)    
 
-function train(M::Model, lambda::Array; quiet=false, kwargs...)
-    setsolver(M)
+function trainpathx(M::Model, lambda::Array; quiet=true, kwargs...)
     nl = length(lambda)
-    M.lambda = lambda
-    M.theta = Array{Any}(nl)
-    M.trainloss = zeros(nl)
-    M.testloss = zeros(nl)
+    theta = Array{Any}(nl)
+    trainloss = zeros(nl)
+    testloss = zeros(nl)
     for i=1:nl
-        M.theta[i], M.trainloss[i], M.testloss[i] = trainx(M, lambda[i])
+        theta[i], trainloss[i], testloss[i] = trainx(M, lambda[i])
     end
-    M.imin =  findmin(M.testloss)[2]
-    M.lambdamin = M.lambda[M.imin]
-    M.istrained = true
-    M.hasregpath = true
-    if !quiet
-        @printf("optimal lambda = %.3f\n", M.lambdamin)
-        @printf("optimal test loss = %.3f\n", M.testloss[M.imin])
-    end
+    imin =  findmin(testloss)[2]
+    return theta, lambda, trainloss, testloss, imin
 end
 
 ##############################################################################
@@ -262,8 +231,8 @@ end
 
 
 
-function splittraintest(M::Model, trainfrac)
-    if isa(M.D, NoData) || M.D.trainfrac != trainfrac
+function splittraintest(M::Model, trainfrac, resplit)
+    if resplit || isa(M.D, NoData) || M.D.trainfrac != trainfrac
         M.D = SplitData(M.X, M.Y, trainfrac)
     end
 end
@@ -279,18 +248,39 @@ function trainfolds(M::Model; nfolds=5)
     trainfoldsx(M, nfolds)
 end
 
-function trainpath(M::Model; trainfrac=0.8, lambda=logspace(-5,5,100))
-    splittraintest(M, trainfrac)
-    trainpathx(M, lambda)
+function trainpath(M::Model; trainfrac=0.8, resplit=false, features=nothing,
+                   lambda=logspace(-5,5,100), quiet=true)
+    splittraintest(M, trainfrac, resplit)
+    setsolver(M)
+    if features != nothing
+        setfeatures(M, features)
+    end
+    theta, lamba, trainloss, testloss, imin = trainpathx(M, lambda)
+    M.D.results = RegPathResults(theta, lamba, trainloss, testloss, imin)
+    M.istrained = true
+    if !quiet
+        @printf("optimal lambda = %.3f\n", lambda[imin])
+        @printf("optimal test loss = %.3f\n", testloss[imin])
+    end
+
 end
 
 
-function train(M::Model; trainfrac=0.8, lambda=1e-10)
-    splittraintest(M, trainfrac)
+function train(M::Model; trainfrac=0.8, resplit=false, features=nothing,
+               lambda=1e-10, quiet=true)
+    splittraintest(M, trainfrac, resplit)
     setsolver(M)
+    if features != nothing
+        setfeatures(M, features)
+    end
     theta, trainloss, testloss = trainx(M, lambda)
     M.D.results  = PointResults(theta, lambda, trainloss, testloss)
     M.istrained = true
+    if !quiet
+        @printf("lambda = %f, \n", lambda)
+        @printf("training loss = %.4f\n", trainloss)
+        @printf("test loss = %.4f\n", testloss)
+    end
 end
 
 
@@ -342,16 +332,44 @@ end
 Ytrain(D::SplitData) = D.Ytrain
 Ytest(D::SplitData) = D.Ytest
 
+
 testloss(R::PointResults) = R.testloss
 trainloss(R::PointResults) = R.trainloss
 thetaopt(R::PointResults) = R.theta
-lambdaopt(R::PointResults) = R.lambda
+lambda(R::PointResults) = R.lambda
 
+
+lambdapath(R::RegPathResults) = R.lambda
+testlosspath(R::RegPathResults) = R.testloss
+trainlosspath(R::RegPathResults) = R.trainloss
+function thetapath(R::RegPathResults)
+    r = length(R.lambda)
+    d = length(R.theta[1])
+    T = zeros(d,r)
+    for i=1:r
+        T[:,i] = R.theta[i]
+    end
+    return T'
+end
+
+
+
+testloss(R::RegPathResults) = R.testloss[R.imin]
+trainloss(R::RegPathResults) = R.trainloss[R.imin]
+thetaopt(R::RegPathResults) = R.theta[R.imin]
+lambdaopt(R::RegPathResults) = R.lambda[R.imin]
 
 ##############################################################################
 
+function status(R::RegPathResults)
+    println("optimal lambda: ",  lambdaopt(R))
+    println("optimal test loss: ", testloss(R))
+end
 
-
+function status(R::PointResults)
+    println("training  loss: ", trainloss(R))
+    println("test loss: ", testloss(R))
+end
 
 """
 Prints and returns the status of the model.
@@ -359,17 +377,12 @@ Prints and returns the status of the model.
 function status(M::Model)
     println("training samples: ", length(Ytrain(M)))
     println("test samples: ", length(Ytest(M)))
-    if M.istrained
-        if M.hasregpath
-            println("optimal lambda: ",  M.lambdamin)
-            println("optimal test loss: ", M.testloss[M.imin])
-        else
-            println("training  loss: ", trainloss(M))
-            println("test loss: ", testloss(M))
-        end
-    end
-    return 
+    status(M.D.results)
 end
+
+
+lambda(M::Model) = lambda(M.D.results)
+lambdaopt(M::Model) = lambdaopt(M.D.results)
 
 
 
@@ -392,15 +405,4 @@ Returns model parameters
 """
 function thetaopt(M::Model)
     return thetaopt(M.D.results)
-end
-
-
-function thetamatrix(M::Model)
-    r = length(M.lambda)
-    d = length(M.theta[1])
-    T = zeros(d,r)
-    for i=1:r
-        T[:,i] = M.theta[i]
-    end
-    return T'
 end
