@@ -35,6 +35,7 @@ mutable struct FoldedData<:ErmData
     Y
     nfolds
     foldrows
+    nonfoldrows
     results::ErmResults
 end
 
@@ -95,11 +96,13 @@ function getfoldrows(n, nfolds)
     unshift!(groups,0)
     # i'th fold has indices groups[i]+1:groups[i+1]
     p = randperm(n)
-    foldrows=Any[]
+    foldrows = Any[]
+    nonfoldrows = Any[]
     for i=1:nfolds
         push!(foldrows, sort(p[groups[i]+1:groups[i+1]]))
+        push!(nonfoldrows, sort([ p[1:groups[i]] ; p[groups[i+1]+1:end]]))
     end
-    return foldrows
+    return foldrows, nonfoldrows
 end
 
     
@@ -145,50 +148,6 @@ predictu(M::Model, u::Array{Float64,2}) =  predictx(M::Model, embed(M.Xembed, u)
 
 
 
-##############################################################################
-# fit
-
-function setsolver(M::Model)
-    if isa(M.solver, DefaultSolver)
-        M.solver = getsolver(M.loss, M.regularizer)
-    end
-end
-
-function trainx(M::Model,  lambda::Number)
-    theta = solve(M.solver, M.loss, M.regularizer, M.regweights,
-                  Xtrain(M), Ytrain(M), lambda)
-    trainloss = loss(M.loss, predicttrain(M, theta), Ytrain(M.D))
-    testloss = loss(M.loss,  predicttest(M, theta), Ytest(M.D))
-    return PointResults(theta, lambda, trainloss, testloss)
-end
-
-function trainpathx(M::Model, lambda::Array; quiet=true, kwargs...)
-    m = length(lambda)
-    results = Array{PointResults}(m)
-    for i=1:m
-        results[i] = trainx(M, lambda[i])
-    end
-    imin =  findmin([x.testloss for x in results])[2]
-    return RegPathResults(results, imin)
-end
-
-
-
-# function trainfolds(M::Model, lambda::Number; quiet=false)
-#     setsolver(M)
-#     M.lambda = lambda
-#     M.theta = Array{Any}(M.D.nfolds)
-#     M.trainloss = zeros(M.D.nfolds)
-#     M.testloss = zeros(M.D.nfolds)
-#     for i=1:M.D.nfolds
-#         theta = solve(M.solver, M.loss, M.regularizer, M.regweights,
-#                       Xtrain(M.D), train(M.D), lambda)
-#         M.trainloss[i] = loss(M.loss, predicttrain(M, theta), Ytrain(M.D))
-#         M.testloss[i] = loss(M.loss,  predicttest(M, theta), Ytest(M.D))
-#     end
-# end
-
-
 
 
 
@@ -212,57 +171,95 @@ function SplitData(X, Y, trainfrac)
 end
 
 function FoldedData(X, Y, nfolds)
-    foldrows = getfoldrows(size(X,1), nfolds)
-    return FoldedData(X, Y, nfolds, foldrows, NoResults())
+    foldrows, nonfoldrows = getfoldrows(size(X,1), nfolds)
+    return FoldedData(X, Y, nfolds, foldrows, nonfoldrows, NoResults())
 end
 
+##############################################################################
 
 
 function splittraintest(M::Model, trainfrac, resplit)
-    if resplit || isa(M.D, NoData) || M.D.trainfrac != trainfrac
+    if resplit || !isa(M.D, SplitData) || M.D.trainfrac != trainfrac
         M.D = SplitData(M.X, M.Y, trainfrac)
     end
 end
 
-function splitfolds(M::Model, nfolds)
-    if isa(M.D, NoData) || M.D.nfolds != nfolds
+function splitfolds(M::Model, nfolds, resplit)
+    if resplit || !isa(M.D, FoldedData) || M.D.nfolds != nfolds
         M.D = FoldedData(M.X, M.Y, nfolds)
     end
 end
 
-function trainfolds(M::Model; nfolds=5)
-    splitfolds(M, nfolds)
-    trainfoldsx(M, nfolds)
-end
 
-function pretrain(M::Model;  trainfrac=0.8, resplit=false, features=nothing, kwargs...)
-    splittraintest(M, trainfrac, resplit)
+
+##############################################################################
+# fit
+
+function trainx(M::Model, lambda, Xtrain, Xtest, Ytrain, Ytest)
     setsolver(M)
-    if features != nothing
-        setfeatures(M, features)
-    end
+    theta = solve(M.solver, M.loss, M.regularizer, M.regweights, Xtrain, Ytrain, lambda)
+    trainloss = loss(M.loss, predict(M, Xtrain, theta), Ytrain)
+    testloss = loss(M.loss,  predict(M, Xtest,  theta), Ytest)
+    return PointResults(theta, lambda, trainloss, testloss)
 end
 
-function posttrain(M::Model; quiet=true, kwargs...)
+
+function trainfoldsx(M::Model, lambda, nfolds)
+    results = Array{PointResults}(nfolds)
+    for i=1:nfolds
+        results[i] =  trainx(M, lambda, Xtrain(M,i), Xtest(M,i), Ytrain(M,i), Ytest(M,i))
+    end
+    return FoldResults(results)
+end
+
+
+function trainpathx(M::Model, lambda::Array; quiet=true, kwargs...)
+    m = length(lambda)
+    results = Array{PointResults}(m)
+    for i=1:m
+        results[i] = trainx(M, lambda[i], Xtrain(M), Xtest(M), Ytrain(M), Ytest(M))
+    end
+    imin =  findmin([x.testloss for x in results])[2]
+    return RegPathResults(results, imin)
+end
+
+
+function trainfolds(M::Model; lambda=1e-10, nfolds=5,
+                    resplit=false, features=nothing, quiet=true, kwargs...)
+    splitfolds(M, nfolds, resplit)
+    setfeaturesifasked(M, features)
+    M.D.results = trainfoldsx(M, lambda, nfolds)
     M.istrained = true
-    if !quiet
-        status(M)
+    statusifasked(M, quiet)
+end
+
+
+function trainpath(M::Model; lambda=logspace(-5,5,100), trainfrac=0.8,
+                   resplit=false, features=nothing, quiet=true, kwargs...)
+    splittraintest(M, trainfrac, resplit)
+    setfeaturesifasked(M, features)
+    M.D.results = trainpathx(M, lambda)
+    M.istrained = true
+    statusifasked(M, quiet)
+end
+
+
+function train(M::Model; lambda=1e-10, trainfrac=0.8,
+               resplit=false, features=nothing, quiet=true, kwargs...)
+    splittraintest(M, trainfrac, resplit)
+    setfeaturesifasked(M, features)
+    M.D.results = trainx(M, lambda, Xtrain(M), Xtest(M), Ytrain(M), Ytest(M))
+    M.istrained = true
+    statusifasked(M, quiet)
+end
+
+##############################################################################
+
+function setsolver(M::Model)
+    if isa(M.solver, DefaultSolver)
+        M.solver = getsolver(M.loss, M.regularizer)
     end
 end
-
-function trainpath(M::Model; lambda=logspace(-5,5,100), kwargs...)
-    pretrain(M; kwargs...)
-    M.D.results = trainpathx(M, lambda)
-    posttrain(M; kwargs...)
-end
-
-
-function train(M::Model; lambda=1e-10, kwargs...)
-    pretrain(M; kwargs...)
-    M.D.results = trainx(M, lambda)
-    posttrain(M; kwargs...)
-end
-
 
 function setfeaturesx(M::Model, f)
     if f == "all"
@@ -280,49 +277,63 @@ function setfeatures(M::Model, f)
     end
 end
 
+function setfeaturesifasked(M::Model, features)
+    if features != nothing
+        setfeatures(M, features)
+    end
+end
+
+##############################################################################
+# querying
+function selectfeatures(M::Model, X)
+    if M.featurelist == nothing
+        return X
+    end
+    return X[:,M.featurelist]
+end
+
+Xtest(M::Model) = selectfeatures(M, Xtest(M.D))
+Xtrain(M::Model) = selectfeatures(M, Xtrain(M.D))
+Xtrain(D::SplitData) = D.Xtrain
+Xtest(D::SplitData) = D.Xtest
+
+
+Xtest(M::Model, fold) = selectfeatures(M, Xtest(M.D, fold))
+Xtrain(M::Model, fold) = selectfeatures(M, Xtrain(M.D, fold))
+Xtrain(D::FoldedData, fold) = D.X[D.nonfoldrows[fold],:]
+Ytrain(D::FoldedData, fold) = D.Y[D.nonfoldrows[fold],:]
+Xtest(D::FoldedData, fold) = D.X[D.foldrows[fold],:]
+Ytest(D::FoldedData, fold) = D.Y[D.foldrows[fold],:]
+Ytest(M::Model, fold) = Ytest(M.D, fold)
+Ytrain(M::Model, fold) = Ytrain(M.D, fold)
+
 Ytest(M::Model) = Ytest(M.D)
 Ytrain(M::Model) = Ytrain(M.D)
-
-function Xtest(M::Model)
-    if M.featurelist == nothing
-        return Xtest(M.D)
-    end
-    return Xtest(M.D)[:, M.featurelist]
-end
-
-function Xtrain(M::Model)
-    if M.featurelist == nothing
-        return Xtrain(M.D)
-    end
-    return Xtrain(M.D)[:, M.featurelist]
-end
-
-function Xtrain(D::SplitData)
-    return D.Xtrain
-end
-
-function Xtest(D::SplitData)
-    return D.Xtest
-end
-
-
 Ytrain(D::SplitData) = D.Ytrain
 Ytest(D::SplitData) = D.Ytest
+
+##############################################################################
+# querying results
 
 testloss(R::PointResults) = R.testloss
 trainloss(R::PointResults) = R.trainloss
 thetaopt(R::PointResults) = R.theta
 lambda(R::PointResults) = R.lambda
 
+testloss(R::FoldResults,i) = testloss(R.results[i])
+trainloss(R::FoldResults,i) = trainloss(R.results[i])
+thetaopt(R::FoldResults,i) = thetaopt(R.results[i])
+lambda(R::FoldResults,i) = lambda(R.results[i])
+
 
 lambdapath(R::RegPathResults) = [r.lambda for r in R.results]
 testlosspath(R::RegPathResults) = [r.testloss for r in R.results]
 trainlosspath(R::RegPathResults) = [r.trainloss for r in R.results]
 
-testloss(R::RegPathResults) = R.results[R.imin].testloss
-trainloss(R::RegPathResults) = R.results[R.imin].trainloss
-thetaopt(R::RegPathResults) = R.results[R.imin].theta
-lambdaopt(R::RegPathResults) = R.results[R.imin].lambda
+testloss(R::RegPathResults) = testloss(R.results[R.imin])
+trainloss(R::RegPathResults) = trainloss(R.results[R.imin])
+thetaopt(R::RegPathResults) = thetaopt(R.results[R.imin])
+lambdaopt(R::RegPathResults) = lambda(R.results[R.imin])
 
 function thetapath(R::RegPathResults)
     r = length(R.results)
@@ -334,13 +345,18 @@ function thetapath(R::RegPathResults)
     return T'
 end
 
+testloss(M::Model,i) = testloss(M.D.results,i)
+trainloss(M::Model,i) = trainloss(M.D.results,i)
+thetaopt(M::Model,i) = thetaopt(M.D.results,i)
+lambda(M::Model,i) = lambda(M.D.results,i)
 
-
-lambda(M::Model) = lambda(M.D.results)
-lambdaopt(M::Model) = lambdaopt(M.D.results)
 testloss(M::Model) = testloss(M.D.results)
 trainloss(M::Model) = trainloss(M.D.results)
 thetaopt(M::Model) = thetaopt(M.D.results)
+lambda(M::Model) = lambda(M.D.results)
+
+lambdaopt(M::Model) = lambdaopt(M.D.results)
+
 lambdapath(M::Model) = lambdapath(M.D.results)
 testlosspath(M::Model) = testlosspath(M.D.results)
 trainlosspath(M::Model) = trainlosspath(M.D.results)
@@ -363,9 +379,15 @@ end
 """
 Prints and returns the status of the model.
 """
-function status(M::Model)
+function status(M::Model; quiet=true)
     println("training samples: ", length(Ytrain(M)))
     println("test samples: ", length(Ytest(M)))
     status(M.D.results)
+end
+
+function statusifasked(M, quiet)
+    if !quiet
+        status(M)
+    end
 end
 

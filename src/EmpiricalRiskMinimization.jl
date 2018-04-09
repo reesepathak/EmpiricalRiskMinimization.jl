@@ -21,11 +21,13 @@ export minimize, minimize_unsupervised
 include("optimizer.jl")
 
 # Models
-export Model, Mldata, FoldedData, train, trainpath, status
-export predicttest, predicttrain, predictu, setfeatures
+export Model, Mldata, FoldedData
+export train, trainpath, trainfolds, status
+export setfeatures
+export predicttest, predicttrain, predictu
 export thetaopt, trainloss, testloss, lambda, lambdaopt
-export lambdapath,testlosspath,trainlosspath
-export Ytrain, Ytest, Xtrain, Xtest, thetapath
+export lambdapath, testlosspath, trainlosspath, thetapath
+export Ytrain, Ytest, Xtrain, Xtest
 include("model.jl")
 
 # Utility functions
