@@ -6,10 +6,7 @@ abstract type ErmResults end
 
 
 mutable struct RegPathResults<:ErmResults
-    theta      # list of thetas 
-    lambda     # list of numbers
-    trainloss  # list of numbers
-    testloss   # list of numbers
+    results    # list of PointResults
     imin       # index of lambda that minimizes test loss
 end
 
@@ -21,10 +18,7 @@ mutable struct PointResults<:ErmResults
 end
 
 mutable struct FoldResults<:ErmResults
-    theta      # list of thetas, one per fold
-    lambda     # lambda used
-    trainloss  # list of trainlosses, one per fold
-    testloss   # list of testlosses, one per fold
+    results    # list of results, one per fold
 end
 
 mutable struct NoResults<:ErmResults end
@@ -144,9 +138,9 @@ end
 predict(M::Model, X::Array{Float64,2}, theta) = X*theta
 predicttest(M::Model, theta) = predict(M, Xtest(M), theta)
 predicttrain(M::Model, theta) = predict(M, Xtrain(M), theta)
-predicttest(M::Model) = predict(M, Xtest(M), thetaopt(M.D.results))
-predicttrain(M::Model) = predict(M, Xtrain(M), thetaopt(M.D.results))
-predictx(M::Model, x) = predict(M, x, thetaopt(M.D.results))
+predicttest(M::Model) = predict(M, Xtest(M), thetaopt(M))
+predicttrain(M::Model) = predict(M, Xtrain(M), thetaopt(M))
+predictx(M::Model, x) = predict(M, x, thetaopt(M))
 predictu(M::Model, u::Array{Float64,2}) =  predictx(M::Model, embed(M.Xembed, u))
 
 
@@ -165,45 +159,38 @@ function trainx(M::Model,  lambda::Number)
                   Xtrain(M), Ytrain(M), lambda)
     trainloss = loss(M.loss, predicttrain(M, theta), Ytrain(M.D))
     testloss = loss(M.loss,  predicttest(M, theta), Ytest(M.D))
-    return theta, trainloss, testloss
+    return PointResults(theta, lambda, trainloss, testloss)
 end
-
-function trainpoint(M::Model, lambda::Number; quiet=false)
-    M.lambda = lambda
-    M.theta, M.trainloss, M.testloss = trainx(M,  lambda)
-    M.istrained = true
-    M.hasregpath = false
-end
-
-function trainfolds(M::Model, lambda::Number; quiet=false)
-    setsolver(M)
-    M.lambda = lambda
-    M.theta = Array{Any}(M.D.nfolds)
-    M.trainloss = zeros(M.D.nfolds)
-    M.testloss = zeros(M.D.nfolds)
-    for i=1:M.D.nfolds
-        theta = solve(M.solver, M.loss, M.regularizer, M.regweights,
-                      Xtrain(M.D), train(M.D), lambda)
-        M.trainloss[i] = loss(M.loss, predicttrain(M, theta), Ytrain(M.D))
-        M.testloss[i] = loss(M.loss,  predicttest(M, theta), Ytest(M.D))
-    end
-
-end
-
-
-train(M::Model; kwargs...) = train(M, 1e-10; kwargs...)    
 
 function trainpathx(M::Model, lambda::Array; quiet=true, kwargs...)
-    nl = length(lambda)
-    theta = Array{Any}(nl)
-    trainloss = zeros(nl)
-    testloss = zeros(nl)
-    for i=1:nl
-        theta[i], trainloss[i], testloss[i] = trainx(M, lambda[i])
+    m = length(lambda)
+    results = Array{PointResults}(m)
+    for i=1:m
+        results[i] = trainx(M, lambda[i])
     end
-    imin =  findmin(testloss)[2]
-    return theta, lambda, trainloss, testloss, imin
+    imin =  findmin([x.testloss for x in results])[2]
+    return RegPathResults(results, imin)
 end
+
+
+
+# function trainfolds(M::Model, lambda::Number; quiet=false)
+#     setsolver(M)
+#     M.lambda = lambda
+#     M.theta = Array{Any}(M.D.nfolds)
+#     M.trainloss = zeros(M.D.nfolds)
+#     M.testloss = zeros(M.D.nfolds)
+#     for i=1:M.D.nfolds
+#         theta = solve(M.solver, M.loss, M.regularizer, M.regweights,
+#                       Xtrain(M.D), train(M.D), lambda)
+#         M.trainloss[i] = loss(M.loss, predicttrain(M, theta), Ytrain(M.D))
+#         M.testloss[i] = loss(M.loss,  predicttest(M, theta), Ytest(M.D))
+#     end
+# end
+
+
+
+
 
 ##############################################################################
 
@@ -248,41 +235,33 @@ function trainfolds(M::Model; nfolds=5)
     trainfoldsx(M, nfolds)
 end
 
-function trainpath(M::Model; trainfrac=0.8, resplit=false, features=nothing,
-                   lambda=logspace(-5,5,100), quiet=true)
+function pretrain(M::Model;  trainfrac=0.8, resplit=false, features=nothing, kwargs...)
     splittraintest(M, trainfrac, resplit)
     setsolver(M)
     if features != nothing
         setfeatures(M, features)
     end
-    theta, lamba, trainloss, testloss, imin = trainpathx(M, lambda)
-    M.D.results = RegPathResults(theta, lamba, trainloss, testloss, imin)
-    M.istrained = true
-    if !quiet
-        @printf("optimal lambda = %.3f\n", lambda[imin])
-        @printf("optimal test loss = %.3f\n", testloss[imin])
-    end
-
 end
 
-
-function train(M::Model; trainfrac=0.8, resplit=false, features=nothing,
-               lambda=1e-10, quiet=true)
-    splittraintest(M, trainfrac, resplit)
-    setsolver(M)
-    if features != nothing
-        setfeatures(M, features)
-    end
-    theta, trainloss, testloss = trainx(M, lambda)
-    M.D.results  = PointResults(theta, lambda, trainloss, testloss)
+function posttrain(M::Model; quiet=true, kwargs...)
     M.istrained = true
     if !quiet
-        @printf("lambda = %f, \n", lambda)
-        @printf("training loss = %.4f\n", trainloss)
-        @printf("test loss = %.4f\n", testloss)
+        status(M)
     end
 end
 
+function trainpath(M::Model; lambda=logspace(-5,5,100), kwargs...)
+    pretrain(M; kwargs...)
+    M.D.results = trainpathx(M, lambda)
+    posttrain(M; kwargs...)
+end
+
+
+function train(M::Model; lambda=1e-10, kwargs...)
+    pretrain(M; kwargs...)
+    M.D.results = trainx(M, lambda)
+    posttrain(M; kwargs...)
+end
 
 
 function setfeaturesx(M::Model, f)
@@ -318,8 +297,6 @@ function Xtrain(M::Model)
     return Xtrain(M.D)[:, M.featurelist]
 end
 
-
-
 function Xtrain(D::SplitData)
     return D.Xtrain
 end
@@ -332,32 +309,44 @@ end
 Ytrain(D::SplitData) = D.Ytrain
 Ytest(D::SplitData) = D.Ytest
 
-
 testloss(R::PointResults) = R.testloss
 trainloss(R::PointResults) = R.trainloss
 thetaopt(R::PointResults) = R.theta
 lambda(R::PointResults) = R.lambda
 
 
-lambdapath(R::RegPathResults) = R.lambda
-testlosspath(R::RegPathResults) = R.testloss
-trainlosspath(R::RegPathResults) = R.trainloss
+lambdapath(R::RegPathResults) = [r.lambda for r in R.results]
+testlosspath(R::RegPathResults) = [r.testloss for r in R.results]
+trainlosspath(R::RegPathResults) = [r.trainloss for r in R.results]
+
+testloss(R::RegPathResults) = R.results[R.imin].testloss
+trainloss(R::RegPathResults) = R.results[R.imin].trainloss
+thetaopt(R::RegPathResults) = R.results[R.imin].theta
+lambdaopt(R::RegPathResults) = R.results[R.imin].lambda
+
 function thetapath(R::RegPathResults)
-    r = length(R.lambda)
-    d = length(R.theta[1])
+    r = length(R.results)
+    d = length(R.results[1].theta)
     T = zeros(d,r)
     for i=1:r
-        T[:,i] = R.theta[i]
+        T[:,i] = R.results[i].theta
     end
     return T'
 end
 
 
 
-testloss(R::RegPathResults) = R.testloss[R.imin]
-trainloss(R::RegPathResults) = R.trainloss[R.imin]
-thetaopt(R::RegPathResults) = R.theta[R.imin]
-lambdaopt(R::RegPathResults) = R.lambda[R.imin]
+lambda(M::Model) = lambda(M.D.results)
+lambdaopt(M::Model) = lambdaopt(M.D.results)
+testloss(M::Model) = testloss(M.D.results)
+trainloss(M::Model) = trainloss(M.D.results)
+thetaopt(M::Model) = thetaopt(M.D.results)
+lambdapath(M::Model) = lambdapath(M.D.results)
+testlosspath(M::Model) = testlosspath(M.D.results)
+trainlosspath(M::Model) = trainlosspath(M.D.results)
+thetapath(M::Model) = thetapath(M.D.results)
+
+
 
 ##############################################################################
 
@@ -380,29 +369,3 @@ function status(M::Model)
     status(M.D.results)
 end
 
-
-lambda(M::Model) = lambda(M.D.results)
-lambdaopt(M::Model) = lambdaopt(M.D.results)
-
-
-
-"""
-Returns the final test loss of the model.
-"""
-function testloss(M::Model)
-    return testloss(M.D.results)
-end
-
-"""
-Returns the final training loss of the model.
-"""
-function trainloss(M::Model)
-    return trainloss(M.D.results)
-end
-
-"""
-Returns model parameters 
-"""
-function thetaopt(M::Model)
-    return thetaopt(M.D.results)
-end
