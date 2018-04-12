@@ -13,7 +13,7 @@ export L1Reg, L2Reg, L1L2Reg, NoReg, PosReg
 include("regularizers.jl")
 
 # Embeddings
-export Standardize, IdentityEmbed, PolyEmbed, AppendOneEmbed
+export Standardize, IdentityEmbed, PolyEmbed, AppendOneEmbed, PiecewiseEmbed, embed
 include("embeddings.jl")
 
 # GD function

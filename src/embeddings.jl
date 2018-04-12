@@ -51,6 +51,25 @@ function embed(e::PolyEmbed, X::Array{Float64,2})
 end
 
 
+mutable struct PiecewiseEmbed<:Embedding
+    knot
+end
+
+# this is a neat trick for allowing many knots
+# we embed by appending a new feature
+# TODO: we need a better API for this
+function embed(e::PiecewiseEmbed, X::Array{Float64,2})
+    d,n = size(X)
+    Xnew = zeros(d,n+1)
+    for i=1:d
+        Xnew[i,1:n] = X[i,:]
+        Xnew[i,n+1] = max(X[i,1]-e.knot,0)
+    end
+    return Xnew
+end
+
+
+
 # apply list of embeddings from right to left
 function embed(E::Array, z)
     ne = length(E)

@@ -157,6 +157,9 @@ predictu(M::Model, u::Array{Float64,2}) =  predictx(M::Model, embed(M.Xembed, u)
 function Model(U, V, loss, reg; Xembed = false, Yembed = false)
     X, Y, Xembed, Yembed, hasconstfeature = embed(U, V, Xembed, Yembed)
     regweights = ones(size(X,2))
+    if hasconstfeature
+        regweights[1] = 0
+    end
     return  Model(NoData(), loss, reg, DefaultSolver(), X, Y, Xembed, Yembed,
                   hasconstfeature, nothing, regweights, false)
 end
