@@ -1,8 +1,11 @@
 
+using Convex
+
 abstract type Solver end
 
 struct QRSolver <: Solver end
 struct DefaultSolver <: Solver end
+struct CvxSolver <: Solver end
 
 
 
@@ -20,7 +23,38 @@ FistaSolver() = FistaSolver(Any[])
 getsolver(L::SquareLoss, R::L2Reg) = QRSolver()
 getsolver(L::Loss, R::Regularizer) = Fista()
 
+getsolver(L::HuberLoss, R::L2Reg) = CvxSolver()
+getsolver(L::DeadzoneLoss, R::L2Reg) = CvxSolver()
 
+##############################################################################
+# CVX for huber
+
+function solve(s::CvxSolver, L::HuberLoss, R::L2Reg, regweights,
+               X, Y, lambda,  theta_guess=nothing)
+    n,d = size(X)
+    theta = Variable(d)
+    s = Variable(n)
+    problem = minimize( (1/n)*sum(s))
+    for i=1:n
+        problem.constraints +=    s[i] >= huber(X[i,:]'*theta - Y[i], L.M)
+    end
+    solve!(problem)
+    return theta.value
+end
+
+
+function solve(s::CvxSolver, L::DeadzoneLoss, R::L2Reg, regweights,
+               X, Y, lambda,  theta_guess=nothing)
+    n,d = size(X)
+    theta = Variable(d)
+    s = Variable(n)
+    problem = minimize( (1/n)*sum(s))
+    for i=1:n
+        problem.constraints +=    s[i] >= max(abs(X[i,:]'*theta - Y[i]) - L.M, 0)
+    end
+    solve!(problem)
+    return theta.value
+end
 
 
 

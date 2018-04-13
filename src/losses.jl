@@ -57,20 +57,24 @@ end
 # Huber Loss
 #########################################
 struct HuberLoss <: Loss
-    delta::Float64
+    M::Float64
 end
 
 HuberLoss() = HuberLoss(1.0)
 
 function loss(L::HuberLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
-    u = yhat - y
-    abs_error = abs.(u)
-    quadratic = min.(abs_error, L.delta)
-    linear = abs_error - quadratic
-    losses = 0.5 * quadratic .^ 2 + L.delta*linear
-    return L.weight*sum(losses)
+    if length(yhat)>1
+        error("Huber loss applies only to scalars")
+    end
+    u = yhat[1]-y[1]
+    if abs(u) < L.M
+        return u*u
+    end
+    return L.M*(2*abs(u)-L.M)
 end
 
+
+# todo: fix this
 function derivloss(L::HuberLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     u = yhat - y
     ind_sq = abs.(u) .<= L.delta
@@ -80,6 +84,23 @@ function derivloss(L::HuberLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     sq_deriv = X_sq'*X_sq - X_sq'*y
     abs_deriv = L.delta*sum(sign.(u) .* X_abs, 1)'
     return sq_deriv + abs_deriv
+end
+
+
+##############################################################################
+#  Deadzone loss
+struct DeadzoneLoss <: Loss
+    M::Float64
+end
+
+DeadzoneLoss() = DeadzoneLoss(1.0)
+
+function loss(L::DeadzoneLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    if length(yhat)>1
+        error("Deadzone loss applies only to scalars")
+    end
+    u = yhat[1]-y[1]
+    return max(abs(u)-L.M, 0)
 end
 
 ##############################################################################
@@ -93,3 +114,5 @@ function loss(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2})
     end
     return l/n
 end
+
+############################################################################## 

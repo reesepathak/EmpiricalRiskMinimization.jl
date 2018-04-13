@@ -138,13 +138,27 @@ end
 
 
 
-predict(M::Model, X::Array{Float64,2}, theta) = X*theta
-predicttest(M::Model, theta) = predict(M, Xtest(M), theta)
-predicttrain(M::Model, theta) = predict(M, Xtrain(M), theta)
-predicttest(M::Model) = predict(M, Xtest(M), thetaopt(M))
-predicttrain(M::Model) = predict(M, Xtrain(M), thetaopt(M))
-predictx(M::Model, x) = predict(M, x, thetaopt(M))
-predictu(M::Model, u::Array{Float64,2}) =  predictx(M::Model, embed(M.Xembed, u))
+
+# if x happens to be a scalar, do we want this to work?
+# predict(M::Model, x::Number,            theta=thetaopt(M))   = [x*theta]
+
+# "predict" could be called "predict_y_from_x"
+# for each record, x,y,u,v are always vectors
+predict(M::Model, x::Array{Float64, 1}, theta=thetaopt(M))   = [dot(x, theta)]
+
+# following could be defined using rowwise, but efficiency might dictate otherwise
+predict(M::Model, X::Array{Float64, 2}, theta=thetaopt(M))   = X*theta
+
+predict_y_from_test(M::Model,                   theta=thetaopt(M))   = predict(M, Xtest(M), theta)
+predict_y_from_train(M::Model,                  theta=thetaopt(M))   = predict(M, Xtrain(M), theta)
+predict_v_from_test(M::Model,                   theta=thetaopt(M))   = unembed(M.Yembed, predict(M, Xtest(M), theta))
+predict_v_from_train(M::Model,                  theta=thetaopt(M))   = unembed(M.Yembed, predict(M, Xtrain(M), theta))
+
+predict_y_from_u(M::Model, u::Array{Float64,1}, theta=thetaopt(M)) =  predict(M::Model, embed(M.Xembed, u), theta)
+predict_y_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u -> predict_y_from_u(M, u, theta), U)
+
+predict_v_from_u(M::Model, u::Array{Float64,1}, theta=thetaopt(M)) =  unembed(M.Yembed, predict_y_from_u(M, u, theta))
+predict_v_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u -> predict_v_from_u(M, u, theta), U)
 
 
 
