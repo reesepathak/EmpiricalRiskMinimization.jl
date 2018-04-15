@@ -26,7 +26,7 @@ function embed(e::Standardize, u::Array{Float64,1})
     if !e.used
         error("cannot standardize single data point")
     end
-    x = (u - e.mean)./e.std
+    x = (u - e.mean[:])./(e.std[:])
 end
 
 function unembed(e::Standardize, x::Array{Float64,1})
@@ -103,8 +103,8 @@ end
 ##############################################################################
 type AppendOneEmbed<:Embedding end
 
-function embed(e::AppendOneEmbed, X::Array{Float64,2})
-    return [ones(size(X,1)) X]
+function embed(e::AppendOneEmbed, x::Array{Float64,1})
+    return matrix([1 x'])
 end
 
 

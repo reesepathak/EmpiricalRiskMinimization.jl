@@ -32,11 +32,11 @@ getsolver(L::DeadzoneLoss, R::L2Reg) = CvxSolver()
 function solve(s::CvxSolver, L::HuberLoss, R::L2Reg, regweights,
                X, Y, lambda,  theta_guess=nothing)
     n,d = size(X)
-    theta = Variable(d)
-    s = Variable(n)
-    problem = minimize( (1/n)*sum(s))
+    theta = Convex.Variable(d)
+    s = Convex.Variable(n)
+    problem = Convex.minimize( (1/n)*sum(s))
     for i=1:n
-        problem.constraints +=    s[i] >= huber(X[i,:]'*theta - Y[i], L.M)
+        problem.constraints +=    s[i] >= huber(X[i,:]'*theta - Y[i], L.alpha)
     end
     solve!(problem)
     return theta.value
@@ -46,11 +46,11 @@ end
 function solve(s::CvxSolver, L::DeadzoneLoss, R::L2Reg, regweights,
                X, Y, lambda,  theta_guess=nothing)
     n,d = size(X)
-    theta = Variable(d)
-    s = Variable(n)
-    problem = minimize( (1/n)*sum(s))
+    theta = Convex.Variable(d)
+    s = Convex.Variable(n)
+    problem = Convex.minimize( (1/n)*sum(s))
     for i=1:n
-        problem.constraints +=    s[i] >= max(abs(X[i,:]'*theta - Y[i]) - L.M, 0)
+        problem.constraints +=    s[i] >= max(abs(X[i,:]'*theta - Y[i]) - L.alpha, 0)
     end
     solve!(problem)
     return theta.value

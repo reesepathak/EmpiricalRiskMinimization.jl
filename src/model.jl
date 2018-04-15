@@ -45,6 +45,8 @@ mutable struct SplitData<:ErmData
     Ytrain
     Xtest
     Ytest
+    trainrows
+    testrows
     trainfrac
     results::ErmResults
 end
@@ -59,6 +61,8 @@ mutable struct Model
     loss::Loss
     regularizer::Regularizer
     solver::Solver
+    U
+    V
     X
     Y
     Xembed
@@ -174,7 +178,7 @@ function Model(U, V, loss, reg; Xembed = false, Yembed = false)
     if hasconstfeature
         regweights[1] = 0
     end
-    return  Model(NoData(), loss, reg, DefaultSolver(), X, Y, Xembed, Yembed,
+    return  Model(NoData(), loss, reg, DefaultSolver(), U, V, X, Y, Xembed, Yembed,
                   hasconstfeature, nothing, regweights, false)
 end
 
@@ -184,7 +188,7 @@ function SplitData(X, Y, trainfrac)
     Ytrain = Y[trainrows,:]
     Xtest = X[testrows,:]
     Ytest = Y[testrows,:]
-    return SplitData(Xtrain, Ytrain, Xtest, Ytest, trainfrac, NoResults())
+    return SplitData(Xtrain, Ytrain, Xtest, Ytest, trainrows, testrows, trainfrac, NoResults())
 end
 
 function FoldedData(X, Y, nfolds)
@@ -313,6 +317,10 @@ Xtest(M::Model) = selectfeatures(M, Xtest(M.D))
 Xtrain(M::Model) = selectfeatures(M, Xtrain(M.D))
 Xtrain(D::SplitData) = D.Xtrain
 Xtest(D::SplitData) = D.Xtest
+Utrain(M::Model) = M.U[M.D.trainrows,:]
+Utest(M::Model)  = M.U[M.D.testrows,:]
+Vtrain(M::Model) = M.V[M.D.trainrows,:]
+Vtest(M::Model)  = M.V[M.D.testrows,:]
 
 
 Xtest(M::Model, fold) = selectfeatures(M, Xtest(M.D, fold))

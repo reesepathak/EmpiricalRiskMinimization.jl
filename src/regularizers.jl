@@ -6,7 +6,7 @@ abstract type Regularizer end
 #########################################
 struct L1Reg <: Regularizer end
 
-eval(R::L1Reg, u) = norm(u, 1)
+regul(R::L1Reg, u) = norm(u, 1)
 
 function prox(R::L1Reg, grad_step, t)
     return sign.(grad_step).*max.(0, abs.(grad_step) - t)
@@ -17,7 +17,7 @@ end
 #########################################
 struct L2Reg <: Regularizer end
 
-eval(R::L2Reg, u) = dot(u,u)
+regul(R::L2Reg, u) = dot(u,u)
 
 function prox(R::L2Reg, grad_step, t)
     n = norm(grad_step)
@@ -35,7 +35,7 @@ struct L1L2Reg <: Regularizer
     L2_weight::Float64
 end
 
-eval(R::L1L2Reg, u) = R.L1_weight * norm(u, 1) + R.L2_weight * norm(u, 2)^2
+regul(R::L1L2Reg, u) = R.L1_weight * norm(u, 1) + R.L2_weight * norm(u, 2)^2
 
 function prox(R::L1L2Reg, grad_step, t)
     lambd1 = R.L1_weight*t
