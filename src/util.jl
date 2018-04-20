@@ -1,20 +1,15 @@
 
-"""
-Sigmoid function 
-"""
+"Sigmoid function"
 sigm(u) = 1/(1 + exp(-u))
 
 
-"""
-Convert an n-vector to an nx1 aarrays
-"""
+"Convert an n-vector to an nx1 array"
 matrix(x::Array{Float64,1}) = reshape(x, length(x),1)
 matrix(x::Range) = reshape(collect(x), length(x), 1)
 matrix(X::Array{Float64,2}) = X
 matrix(x::RowVector) = reshape(transpose(x), 1, length(x))
 
-# do things rowwise
-# f should map vectors to vectors
+"Apply f to each row of a matrix. f should map vectors to vectors"
 function rowwise(f, X::Array{Float64,2})
     y1 = f(X[1,:])
     n = size(X,1)
@@ -26,4 +21,8 @@ function rowwise(f, X::Array{Float64,2})
     end
     return Y
 end
+
+"compute the rms of a matrix or a vector"
+rms(x::Array{Float64,1}) = sqrt.( (1/length(x)) * (x'*x))
+rms(x::Array{Float64,2}) = rms(x[:])
 

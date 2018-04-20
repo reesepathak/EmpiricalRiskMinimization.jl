@@ -392,22 +392,27 @@ thetapath(M::Model) = thetapath(M.D.results)
 ##############################################################################
 
 function status(R::RegPathResults)
-    println("optimal lambda: ",  lambdaopt(R))
-    println("optimal test loss: ", testloss(R))
+    println("----------------------------------------")
+    println("Optimal results along regpath")
+    println("  optimal lambda: ",  lambdaopt(R))
+    println("  optimal test loss: ", testloss(R))
 end
 
 function status(R::PointResults)
-    println("training  loss: ", trainloss(R))
-    println("test loss: ", testloss(R))
+    println("----------------------------------------")
+    println("Results for single train/test")
+    println("  training  loss: ", trainloss(R))
+    println("  test loss: ", testloss(R))
 end
 
 """
 Prints and returns the status of the model.
 """
 function status(M::Model; quiet=true)
-    println("training samples: ", length(Ytrain(M)))
-    println("test samples: ", length(Ytest(M)))
     status(M.D.results)
+    println("  training samples: ", length(Ytrain(M)))
+    println("  test samples: ", length(Ytest(M)))
+    println("----------------------------------------")
 end
 
 function statusifasked(M, quiet)

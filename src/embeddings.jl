@@ -11,6 +11,18 @@ mutable struct Standardize<:Embedding
 end
 
 ##############################################################################
+# generic embedding
+
+mutable struct FunctionEmbedding <: Embedding
+    f
+end
+
+function embed(e::FunctionEmbedding, u::Array{Float64,1})
+    x = u
+end
+
+
+##############################################################################
 # standardize
 
 function Standardize()
@@ -51,7 +63,8 @@ end
 ##############################################################################
 
 struct IdentityEmbed<:Embedding end
-embed(e::IdentityEmbed, X::Array{Float64,2}) = X
+embed(e::IdentityEmbed, u::Array{Float64,1}) = u
+unembed(e::IdentityEmbed, u::Array{Float64,1}) = u
 
 ##############################################################################
 # polyembed
@@ -90,14 +103,12 @@ end
 # can take inputs which are x or u
 # can append their output to the input or replace the input
 #
-function embed(e::PiecewiseEmbed, X::Array{Float64,2})
-    d,n = size(X)
-    Xnew = zeros(d,n+1)
-    for i=1:d
-        Xnew[i,1:n] = X[i,:]
-        Xnew[i,n+1] = max(X[i,1]-e.knot,0)
-    end
-    return Xnew
+function embed(e::PiecewiseEmbed, u::Array{Float64,1})
+    n = length(u)
+    x = zeros(n+1)
+    x[1:n] = u
+    x[n+1] = max(u[1]-e.knot,0)
+    return x
 end
 
 ##############################################################################
