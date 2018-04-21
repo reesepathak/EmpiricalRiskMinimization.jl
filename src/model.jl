@@ -61,13 +61,10 @@ mutable struct Model
     loss::Loss
     regularizer::Regularizer
     solver::Solver
-    U
-    V
+    S::DataSource
     X
     Y
-    Xembed
-    Yembed
-    hasconstfeature::Bool        # true if the first feature is 1
+    hasconstfeature
     featurelist                  # a list of the columns of X that are of interest
     regweights
     istrained::Bool
@@ -76,23 +73,6 @@ end
 ##############################################################################
 
 
-
-function embed(U, V, Xembed, Yembed)
-    if Xembed == false
-        Xembed = [AppendOneEmbed(), Standardize()]
-    end
-    if Yembed == false
-        Yembed = [Standardize()]
-    end
-    hasconstfeature = false
-    if isa(Xembed[1], AppendOneEmbed)
-        hasconstfeature = true
-    end
-    
-    Y = embed(Yembed, matrix(V))
-    X = embed(Xembed, matrix(U))
-    return X, Y, Xembed, Yembed, hasconstfeature
-end
 
 function getfoldrows(n, nfolds)
     # split into groups
@@ -155,13 +135,13 @@ predict(M::Model, X::Array{Float64, 2}, theta=thetaopt(M))   = X*theta
 
 predict_y_from_test(M::Model,                   theta=thetaopt(M))   = predict(M, Xtest(M), theta)
 predict_y_from_train(M::Model,                  theta=thetaopt(M))   = predict(M, Xtrain(M), theta)
-predict_v_from_test(M::Model,                   theta=thetaopt(M))   = unembed(M.Yembed, predict(M, Xtest(M), theta))
-predict_v_from_train(M::Model,                  theta=thetaopt(M))   = unembed(M.Yembed, predict(M, Xtrain(M), theta))
+predict_v_from_test(M::Model,                   theta=thetaopt(M))   = unembedY(M.S, predict(M, Xtest(M), theta))
+predict_v_from_train(M::Model,                  theta=thetaopt(M))   = unembedY(M.S, predict(M, Xtrain(M), theta))
 
-predict_y_from_u(M::Model, u::Array{Float64,1}, theta=thetaopt(M)) =  predict(M::Model, embed(M.Xembed, u), theta)
+predict_y_from_u(M::Model, u::Array{Float64,1}, theta=thetaopt(M)) =  predict(M::Model, embedU(M.S, u), theta)
 predict_y_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u -> predict_y_from_u(M, u, theta), U)
 
-predict_v_from_u(M::Model, u::Array{Float64,1}, theta=thetaopt(M)) =  unembed(M.Yembed, predict_y_from_u(M, u, theta))
+predict_v_from_u(M::Model, u::Array{Float64,1}, theta=thetaopt(M)) =  unembedY(M.S, predict_y_from_u(M, u, theta))
 predict_v_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u -> predict_v_from_u(M, u, theta), U)
 
 
@@ -170,16 +150,20 @@ predict_v_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u 
 
 
 ##############################################################################
-
-
-function Model(U, V, loss, reg; Xembed = false, Yembed = false)
-    X, Y, Xembed, Yembed, hasconstfeature = embed(U, V, Xembed, Yembed)
+function Model(S::DataSource, loss, reg)
+    X, Y, hasconstfeature = getXY(S)
     regweights = ones(size(X,2))
     if hasconstfeature
         regweights[1] = 0
     end
-    return  Model(NoData(), loss, reg, DefaultSolver(), U, V, X, Y, Xembed, Yembed,
+    return  Model(NoData(), loss, reg, DefaultSolver(), S, X, Y,
                   hasconstfeature, nothing, regweights, false)
+end
+
+
+function Model(U, V, loss, reg; Xembed = false, Yembed = false)
+    S = SimpleSource(U, V, Xembed, Yembed)
+    return Model(S, loss, reg)
 end
 
 function SplitData(X, Y, trainfrac)
@@ -317,10 +301,10 @@ Xtest(M::Model) = selectfeatures(M, Xtest(M.D))
 Xtrain(M::Model) = selectfeatures(M, Xtrain(M.D))
 Xtrain(D::SplitData) = D.Xtrain
 Xtest(D::SplitData) = D.Xtest
-Utrain(M::Model) = M.U[M.D.trainrows,:]
-Utest(M::Model)  = M.U[M.D.testrows,:]
-Vtrain(M::Model) = M.V[M.D.trainrows,:]
-Vtest(M::Model)  = M.V[M.D.testrows,:]
+Utrain(M::Model) = getU(M.S)[M.D.trainrows,:]
+Utest(M::Model)  = getU(M.S)[M.D.testrows,:]
+Vtrain(M::Model) = getV(M.S)[M.D.trainrows,:]
+Vtest(M::Model)  = getV(M.S)[M.D.testrows,:]
 
 
 Xtest(M::Model, fold) = selectfeatures(M, Xtest(M.D, fold))
