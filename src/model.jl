@@ -150,14 +150,20 @@ predict_v_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u 
 
 
 ##############################################################################
-function Model(S::DataSource, loss, reg)
-    X, Y, hasconstfeature = getXY(S)
-    regweights = ones(size(X,2))
+
+function setdata(M::Model)
+    M.X, M.Y, hasconstfeature = getXY(M.S)
+    M.regweights = ones(size(M.X,2))
     if hasconstfeature
-        regweights[1] = 0
+        M.regweights[1] = 0
     end
-    return  Model(NoData(), loss, reg, DefaultSolver(), S, X, Y,
-                  hasconstfeature, nothing, regweights, false)
+end
+function Model(S::DataSource, loss, reg)
+    M =  Model(NoData(), loss, reg, DefaultSolver(), S,
+               nothing, nothing, false,
+               nothing, nothing, false)
+    setdata(M)
+    return M
 end
 
 
@@ -165,6 +171,12 @@ function Model(U, V, loss, reg; Xembed = false, Yembed = false)
     S = SimpleSource(U, V, Xembed, Yembed)
     return Model(S, loss, reg)
 end
+
+function FrameModel(U, V, Unames, Vnames, loss, reg)
+    S = FrameSource(U, V, Unames, Vnames)
+    return Model(S, loss, reg)
+end
+
 
 function SplitData(X, Y, trainfrac)
     trainrows, testrows = splitrows(size(X,1), trainfrac)
@@ -184,13 +196,15 @@ end
 
 
 function splittraintest(M::Model, trainfrac, resplit)
-    if resplit || !isa(M.D, SplitData) || M.D.trainfrac != trainfrac
+    if M.X == nothing || resplit || !isa(M.D, SplitData) || M.D.trainfrac != trainfrac
+        setdata(M)
         M.D = SplitData(M.X, M.Y, trainfrac)
     end
 end
 
 function splitfolds(M::Model, nfolds, resplit)
-    if resplit || !isa(M.D, FoldedData) || M.D.nfolds != nfolds
+    if M.X == nothing || resplit || !isa(M.D, FoldedData) || M.D.nfolds != nfolds
+        setdata(M)
         M.D = FoldedData(M.X, M.Y, nfolds)
     end
 end
@@ -371,7 +385,10 @@ testlosspath(M::Model) = testlosspath(M.D.results)
 trainlosspath(M::Model) = trainlosspath(M.D.results)
 thetapath(M::Model) = thetapath(M.D.results)
 
+##############################################################################
 
+addfeatureU(M::Model, col; kwargs...) = addfeatureU(M.S, col; kwargs...)
+addfeatureV(M::Model, col; kwargs...) = addfeatureV(M.S, col; kwargs...)
 
 ##############################################################################
 
