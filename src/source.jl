@@ -51,9 +51,18 @@ mutable struct DFrame
     names
 end
 
-function DFrame(numrows)
+# empty frame
+function DFrame(numrows::Integer)
     A =  Array{Float64}(numrows,0)
     names = Any[]
+    return DFrame(A,names)
+end
+
+# frame with no names
+function DFrame(A)
+    d = size(A,2)
+    names = Array{Any}(d)
+    fill!(names, "")
     return DFrame(A,names)
 end
 
@@ -212,6 +221,28 @@ end
 
 
 
+mutable struct FunctionPairFmap<:FeatureMap
+    col1  # source column name or number
+    col2  # source column name or number
+    name # destination name, may be nothing
+    f
+end
+
+function applyfmap(FM::FunctionPairFmap, inframe, outframe)
+    sourcedf1, j1 =  col2(FM.col1, inframe, outframe)
+    sourcedf2, j2 =  col2(FM.col2, inframe, outframe)
+    u1  = numcol(sourcedf1, j1)
+    u2  = numcol(sourcedf2, j2)
+    n = length(u1)
+    unew = zeros(n)
+    for i=1:n
+        unew[i]  = FM.f(u1[i], u2[i])
+    end
+    appendcol(outframe, unew, FM.name)
+end
+
+
+
 
 ##############################################################################
 mutable struct FrameSource<:DataSource
@@ -219,18 +250,36 @@ mutable struct FrameSource<:DataSource
     Vf
     Xmaps
     Ymaps
-
-
-    function FrameSource(U, V, Unames, Vnames)
-        Uf = DFrame(U, Unames)
-        Vf = DFrame(V, Vnames)
-        n = size(U,1)
-        Xf = DFrame(n)
-        Yf = DFrame(n)
-        return new(Uf, Vf, Any[], Any[])
-    end
 end
 
+function FrameSource(Uf::DFrame, Vf::DFrame)
+    return FrameSource(Uf, Vf, Any[], Any[])
+
+end
+
+function makeFrameSource(U, V, Unames, Vnames)
+    Uf = DFrame(U, Unames)
+    Vf = DFrame(V, Vnames)
+    return FrameSource(Uf, Vf)
+end
+
+
+function makeFrameSource(U, V)
+    Uf = DFrame(U)
+    Vf = DFrame(V)
+    return FrameSource(Uf, Vf)
+end
+
+    
+
+
+function addfeature(fmaps, col1, col2; etype="product", name=nothing,
+                    kwargs...)
+    if etype == "product"
+        push!(fmaps, FunctionPairFmap(col1, col2, name, (x,y)-> x*y))
+    end
+
+end
 
 function addfeature(fmaps, col;
                     name = nothing, etype="number",
@@ -247,6 +296,9 @@ function addfeature(fmaps, col;
         push!(fmaps, FunctionFmap(col, name, f))
     end
 end
+
+
+
     
 
 function addfeatureU(F::FrameSource, col; kwargs...)
@@ -255,6 +307,14 @@ end
 
 function addfeatureV(F::FrameSource, col; kwargs...)
     addfeature(F.Ymaps, col; kwargs...)
+end
+
+function addfeatureU(F::FrameSource, col1, col2; kwargs...)
+    addfeature(F.Xmaps, col1, col2; kwargs...)
+end
+
+function addfeatureV(F::FrameSource, col1, col2; kwargs...)
+    addfeature(F.Ymaps, col1, col2; kwargs...)
 end
 
 function getXY(F::FrameSource)

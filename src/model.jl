@@ -166,16 +166,23 @@ function Model(S::DataSource, loss, reg)
     return M
 end
 
+#function Model(U, V, loss, reg; Xembed = false, Yembed = false)
+#    S = SimpleSource(U, V, Xembed, Yembed)
+#    return Model(S, loss, reg)
+#end
 
-function Model(U, V, loss, reg; Xembed = false, Yembed = false)
-    S = SimpleSource(U, V, Xembed, Yembed)
+function Model(U, V, Unames, Vnames, loss, reg)
+    S = makeFrameSource(U, V, Unames, Vnames)
     return Model(S, loss, reg)
 end
 
-function FrameModel(U, V, Unames, Vnames, loss, reg)
-    S = FrameSource(U, V, Unames, Vnames)
+
+function Model(U, V, loss, reg)
+    S = makeFrameSource(U, V)
     return Model(S, loss, reg)
 end
+
+
 
 
 function SplitData(X, Y, trainfrac)
@@ -389,6 +396,8 @@ thetapath(M::Model) = thetapath(M.D.results)
 
 addfeatureU(M::Model, col; kwargs...) = addfeatureU(M.S, col; kwargs...)
 addfeatureV(M::Model, col; kwargs...) = addfeatureV(M.S, col; kwargs...)
+addfeatureU(M::Model, col1, col2; kwargs...) = addfeatureU(M.S, col1, col2; kwargs...)
+
 
 ##############################################################################
 
