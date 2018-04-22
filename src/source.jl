@@ -110,9 +110,21 @@ function numcol(DF::DFrame, col)
     return u
 end
 
+# appends or replaces if the name exists already
 function appendcol(DF::DFrame, u, name)
-    DF.A = [DF.A u]
-    push!(DF.names, name)
+    if name != nothing && name in DF.names
+        j = findvalue(name, DF.names)
+        DF.A[:,j] = u
+    else
+        DF.A = [DF.A u]
+        if size(u,2) == 1
+            push!(DF.names, name)
+        else
+            for k=1:size(u,2)
+                push!(DF.names, name * "_$k")
+            end
+        end
+    end
 end
 
 # find all different values in column
@@ -175,12 +187,19 @@ end
 mutable struct OneHotFmap<:FeatureMap
     col  # source column name or number
     name # destination name, may be nothing
+    standardize  # true if standardized
 end
 
 function applyfmap(FM::OneHotFmap, inframe, outframe)
     sourcedf, j =  col2(FM.col, inframe, outframe)
     valtonum, vals = colvalues(sourcedf, j)
     u = coltoonehot(sourcedf, j, valtonum)
+    if FM.standardize
+        n = size(u,1)
+        m = mean(u,1)
+        s = std(u,1)
+        u = (u - repmat(m, n, 1))./repmat(s,n,1)
+    end
     appendcol(outframe, u, FM.name)
 end
 
@@ -221,25 +240,67 @@ end
 
 
 
-mutable struct FunctionPairFmap<:FeatureMap
-    col1  # source column name or number
-    col2  # source column name or number
+mutable struct FunctionListFmap<:FeatureMap
+    col  # list of source column names or numbers
     name # destination name, may be nothing
     f
 end
 
-function applyfmap(FM::FunctionPairFmap, inframe, outframe)
-    sourcedf1, j1 =  col2(FM.col1, inframe, outframe)
-    sourcedf2, j2 =  col2(FM.col2, inframe, outframe)
-    u1  = numcol(sourcedf1, j1)
-    u2  = numcol(sourcedf2, j2)
-    n = length(u1)
+function applyfmap(FM::FunctionListFmap, inframe, outframe)
+    args = Any[]
+    for a in FM.col
+        sourcedf, j =  col2(a, inframe, outframe)
+        u  = numcol(sourcedf, j)
+        push!(args, u)
+    end
+    n = length(args[1])
     unew = zeros(n)
     for i=1:n
-        unew[i]  = FM.f(u1[i], u2[i])
+        a2 = Any[]
+        for j=1:length(args)
+            push!(a2, args[j][i])
+        end
+        unew[i]  = FM.f(a2...)
     end
     appendcol(outframe, unew, FM.name)
 end
+
+
+
+mutable struct StandardizeFmap<:FeatureMap
+    col  # source column name or number
+    name # destination name, may be nothing
+    mean
+    std
+end
+
+function applyfmap(FM::StandardizeFmap, inframe, outframe)
+    sourcedf, j =  col2(FM.col, inframe, outframe)
+    u  = numcol(sourcedf, j)
+    FM.mean = mean(u)
+    FM.std = std(u)
+    unew = (u - FM.mean)/FM.std
+    appendcol(outframe, unew, FM.name)
+end
+
+function StandardizeFmap(col, name)
+    return StandardizeFmap(col, name, nothing, nothing)
+end
+
+
+
+
+
+mutable struct OneFmap<:FeatureMap
+    name # destination name, may be nothing
+end
+
+function applyfmap(FM::OneFmap, inframe, outframe)
+    n = size(inframe.A, 1)
+    u = ones(n)
+    appendcol(outframe, u, FM.name)
+end
+
 
 
 
@@ -250,11 +311,11 @@ mutable struct FrameSource<:DataSource
     Vf
     Xmaps
     Ymaps
+    count
 end
 
 function FrameSource(Uf::DFrame, Vf::DFrame)
-    return FrameSource(Uf, Vf, Any[], Any[])
-
+    return FrameSource(Uf, Vf, Any[], Any[], [0])
 end
 
 function makeFrameSource(U, V, Unames, Vnames)
@@ -270,52 +331,58 @@ function makeFrameSource(U, V)
     return FrameSource(Uf, Vf)
 end
 
+
     
-
-
-function addfeature(fmaps, col1, col2; etype="product", name=nothing,
-                    kwargs...)
-    if etype == "product"
-        push!(fmaps, FunctionPairFmap(col1, col2, name, (x,y)-> x*y))
-    end
-
-end
-
-function addfeature(fmaps, col;
-                    name = nothing, etype="number",
+function getfeature(col; name = nothing, etype="number",
                     categories = nothing,
-                    f = nothing,
-                    kwargs...)
+                    f = nothing, kwargs...)
     if etype == "number"
-        push!(fmaps, AddColumnFmap(col, name))
+        return AddColumnFmap(col, name)
     elseif etype == "onehot"
-        push!(fmaps, OneHotFmap(col, name))
+        return OneHotFmap(col, name, false)
+    elseif etype == "onehotstd"
+        return OneHotFmap(col, name, true)
     elseif etype == "ordinal"
-        push!(fmaps, OrdinalFmap(col, name, categories))
+        return OrdinalFmap(col, name, categories)
     elseif etype == "function"
-        push!(fmaps, FunctionFmap(col, name, f))
+        return FunctionFmap(col, name, f)
+    elseif etype == "standardize"
+        return StandardizeFmap(col, name)
+    elseif etype == "product"
+        return FunctionListFmap(col, name, (x,y)-> x*y)
+    elseif etype == "one"
+        return OneFmap(name)
+    end
+end
+                    
+function addfeaturex(fmaps, count, col; stand=true, name=nothing, etype="number", kwargs...)
+    # make sure every feature has a name
+    if name == nothing
+        name = "feature$(count[1])"
+        count[1] += 1
+    end
+    fe = getfeature(col; name=name, etype=etype, kwargs...)
+    push!(fmaps, fe)
+    if stand && etype != "onehot" && etype != "one" && etype != "onehotstd"
+        # add a featurizer that replaces the feature with name = name
+        # with a standardized version
+        addfeaturex(fmaps, count, name;
+                      etype="standardize", stand=false, name=name, kwargs...)
     end
 end
 
+   
 
-
-    
 
 function addfeatureU(F::FrameSource, col; kwargs...)
-    addfeature(F.Xmaps, col; kwargs...)
+    addfeaturex(F.Xmaps, F.count, col; kwargs...)
 end
 
 function addfeatureV(F::FrameSource, col; kwargs...)
-    addfeature(F.Ymaps, col; kwargs...)
+    addfeaturex(F.Ymaps, F.count, col; kwargs...)
 end
 
-function addfeatureU(F::FrameSource, col1, col2; kwargs...)
-    addfeature(F.Xmaps, col1, col2; kwargs...)
-end
 
-function addfeatureV(F::FrameSource, col1, col2; kwargs...)
-    addfeature(F.Ymaps, col1, col2; kwargs...)
-end
 
 function getXY(F::FrameSource)
     Xf = applyfmaplist(F.Xmaps, F.Uf)

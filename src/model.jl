@@ -394,9 +394,11 @@ thetapath(M::Model) = thetapath(M.D.results)
 
 ##############################################################################
 
+addfeatureU(M::Model; kwargs...) = addfeatureU(M.S, nothing; kwargs...)
+addfeatureV(M::Model; kwargs...) = addfeatureV(M.S, nothing; kwargs...)
 addfeatureU(M::Model, col; kwargs...) = addfeatureU(M.S, col; kwargs...)
 addfeatureV(M::Model, col; kwargs...) = addfeatureV(M.S, col; kwargs...)
-addfeatureU(M::Model, col1, col2; kwargs...) = addfeatureU(M.S, col1, col2; kwargs...)
+
 
 
 ##############################################################################
