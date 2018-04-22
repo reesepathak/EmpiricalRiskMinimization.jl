@@ -197,6 +197,22 @@ end
 
 
 
+mutable struct FunctionFmap<:FeatureMap
+    col  # source column name or number
+    name # destination name, may be nothing
+    f
+end
+
+function applyfmap(FM::FunctionFmap, inframe, outframe)
+    sourcedf, j =  col2(FM.col, inframe, outframe)
+    u  = numcol(sourcedf, j)
+    unew = [ FM.f(x) for x in u]
+    appendcol(outframe, unew, FM.name)
+end
+
+
+
+
 ##############################################################################
 mutable struct FrameSource<:DataSource
     Uf
@@ -219,6 +235,7 @@ end
 function addfeature(fmaps, col;
                     name = nothing, etype="number",
                     categories = nothing,
+                    f = nothing,
                     kwargs...)
     if etype == "number"
         push!(fmaps, AddColumnFmap(col, name))
@@ -226,6 +243,8 @@ function addfeature(fmaps, col;
         push!(fmaps, OneHotFmap(col, name))
     elseif etype == "ordinal"
         push!(fmaps, OrdinalFmap(col, name, categories))
+    elseif etype == "function"
+        push!(fmaps, FunctionFmap(col, name, f))
     end
 end
     
