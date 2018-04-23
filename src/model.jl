@@ -153,7 +153,11 @@ predict_v_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u 
 
 function setdata(M::Model)
     M.X, M.Y, hasconstfeature = getXY(M.S)
-    M.regweights = ones(size(M.X,2))
+    nf = size(M.X,2)
+    if M.featurelist != nothing
+        nf = length(M.featurelist)
+    end
+    M.regweights = ones(nf)
     if hasconstfeature
         M.regweights[1] = 0
     end
@@ -166,20 +170,38 @@ function Model(S::DataSource, loss, reg)
     return M
 end
 
-#function Model(U, V, loss, reg; Xembed = false, Yembed = false)
-#    S = SimpleSource(U, V, Xembed, Yembed)
-#    return Model(S, loss, reg)
-#end
+# old style embeddings
+# function Model(U, V, loss, reg; Xembed = false, Yembed = false)
+#     S = SimpleSource(U, V, Xembed, Yembed)
+#     return Model(S, loss, reg)
+# end
 
-function Model(U, V, Unames, Vnames, loss, reg)
+function defaultembedding(M::Model; stand=true)
+    addfeatureV(M, 1, stand=stand)
+    addfeatureU(M, etype="one")
+    d = size(Uall(M),2) 
+    for i=1:d
+        addfeatureU(M, i, stand=stand)
+    end
+end
+
+function Model(U, V, Unames, Vnames, loss, reg; embedall = false, kwargs...)
     S = makeFrameSource(U, V, Unames, Vnames)
-    return Model(S, loss, reg)
+    M = Model(S, loss, reg)
+    if embedall
+        defaultembedding(M; kwargs...)
+    end
+    return M
 end
 
 
-function Model(U, V, loss, reg)
+function Model(U, V, loss, reg; embedall = false, kwargs...)
     S = makeFrameSource(U, V)
-    return Model(S, loss, reg)
+    M = Model(S, loss, reg)
+    if embedall
+        defaultembedding(M; kwargs...)
+    end
+    return M
 end
 
 
@@ -317,6 +339,10 @@ function selectfeatures(M::Model, X)
     end
     return X[:,M.featurelist]
 end
+
+getU(M::Model) = getU(M.S)
+getV(M::Model) = getV(M.S)
+getXY(M::Model) = getXY(M.S)
 
 Xtest(M::Model) = selectfeatures(M, Xtest(M.D))
 Xtrain(M::Model) = selectfeatures(M, Xtrain(M.D))

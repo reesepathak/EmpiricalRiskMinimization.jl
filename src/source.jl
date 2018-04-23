@@ -1,50 +1,8 @@
 
-abstract type DataSource end
-
-##############################################################################
-
-mutable struct SimpleSource<:DataSource
-    U
-    V
-    Xembed
-    Yembed
-
-    function SimpleSource(U, V, Xembed, Yembed)
-        if Xembed == false
-            Xembed = [AppendOneEmbed(), Standardize()]
-        end
-        if Yembed == false
-        Yembed = [Standardize()]
-        end
-        return new(matrix(U), matrix(V), Xembed, Yembed)
-    end
-end
-
-
-function getXY(S::SimpleSource)
-    hasconstfeature = false
-    if isa(S.Xembed[1], AppendOneEmbed)
-        hasconstfeature = true
-    end
-    Y = embed(S.Yembed, S.V)
-    X = embed(S.Xembed, S.U)
-    return X, Y, hasconstfeature
-end
-
-getU(S::SimpleSource) = S.U
-getV(S::SimpleSource) = S.V
-
-# embed one data record
-embedU(S::SimpleSource, u::Array{Float64,1}) = embed(S.Xembed, u)
-
-# unembed one or many targets
-unembedY(S::SimpleSource, y) = unembed(S.Yembed, y)
-
-
 ##############################################################################
 # an array of strings with header info
 
-findvalue(s, lst)  =  find(x->x==s, lst)[1]
+
 
 mutable struct DFrame
     A
@@ -67,41 +25,100 @@ function DFrame(A)
 end
 
 
-colnum(DF::DFrame, c::String) = findvalue(c, DF.names)
-colnum(DF::DFrame, c::Number) = c
+findcolumn(c::String, DF::DFrame) = findvalue(c, DF.names)
+findcolumn(c::Number, DF::DFrame) = c
 
-function col2(c::Number, inframe, outframe)
-    return inframe, c
+
+
+##############################################################################
+
+abstract type DataSource end
+
+
+##############################################################################
+# interface
+
+mutable struct FrameSource<:DataSource
+    Uf
+    Vf
+    Xmaps
+    Ymaps
+    count
+    Xnames  # saved for unembedding
+    Ynames  # saved for unembedding
 end
 
-# by default c refers to the inframe
-# but can refer to the outframe if
-# c is only in the outframe.names
-function col2(c::String, inframe, outframe)
-    if c in inframe.names
-        return inframe, findvalue(c, inframe.names)
+function FrameSource(Uf::DFrame, Vf::DFrame)
+    return FrameSource(Uf, Vf, Any[], Any[], [0], nothing, nothing)
+end
+
+function makeFrameSource(U, V, Unames, Vnames)
+    Uf = DFrame(matrix(U), Unames)
+    Vf = DFrame(matrix(V), Vnames)
+    return FrameSource(Uf, Vf)
+end
+
+
+function makeFrameSource(U, V)
+    Uf = DFrame(matrix(U))
+    Vf = DFrame(matrix(V))
+    return FrameSource(Uf, Vf)
+end
+
+function getXY(F::FrameSource)
+    Xf = applyfmaplist(F.Xmaps, F.Uf)
+    Yf = applyfmaplist(F.Ymaps, F.Vf)
+    X = Xf.A
+    Y = Yf.A
+    F.Xnames = Xf.names
+    F.Ynames = Yf.names
+    hasconstfeature = false
+    return X, Y, hasconstfeature
+end
+
+
+
+getU(F::FrameSource) = F.Uf.A
+getV(S::FrameSource) = F.Vf.A
+
+# embed one data record
+function embedU(F::FrameSource, u::Array{Float64,1})
+    U = reshape(u, 1, length(u))
+    embedU(F, U)
+end
+
+
+function embedU(F::FrameSource, U::Array{Float64,2})
+    Uf = DFrame(U, F.Uf.names)
+    Xf = applyfmaplist(F.Xmaps, Uf)
+    return Xf.A
+end
+
+##############################################################################
+# internal code 
+
+function findcolumn(c::Number, uvframe, xyframe)
+    return uvframe, c
+end
+
+# by default c refers to the uvframe
+# but can refer to the xyframe if
+# c is only in the xyframe.names
+function findcolumn(c::String, uvframe, xyframe)
+    if c in uvframe.names
+        return uvframe, findvalue(c, uvframe.names)
     end
-    return outframe, findvalue(c, outframe.names)
-end
-    
-
-function isnumeric(DF::DFrame, col)
-    n = size(DF.A,1)
-    j = colnum(col)
-    for i=1:n
-        q = tryparse(Float64, DF.A[i,j])
-        if isnull(q)
-            return false
-        end
+    if c in xyframe.names
+        return xyframe, findvalue(c, xyframe.names)
     end
-    return true
+    # we cannot resolve this column name
+    # but return c so that it can be used in appendcol
+    return xyframe, c
 end
 
-number(x::Number) = convert(Float64,x)
-number(x::String) = parse(Float64,x)
 
-function numcol(DF::DFrame, col)
-    j = colnum(DF, col)
+function columnvalues(DF::DFrame, col)
+    j = findcolumn(col, DF)
     n = size(DF.A, 1)
     u = zeros(n)
     for i=1:n
@@ -110,8 +127,12 @@ function numcol(DF::DFrame, col)
     return u
 end
 
+function appendcol(DF::DFrame, name::Int, u)
+    DF.A[:,name] = u
+end
+
 # appends or replaces if the name exists already
-function appendcol(DF::DFrame, u, name)
+function appendcol(DF::DFrame, name, u)
     if name != nothing && name in DF.names
         j = findvalue(name, DF.names)
         DF.A[:,j] = u
@@ -131,8 +152,8 @@ end
 # assign each a number 1...d
 # return a dict mapping values to numbers
 # and a list of values in order
-function colvalues(DF::DFrame, col)
-    j = colnum(DF, col)
+function uniquecolumnvalues(DF::DFrame, col)
+    j = findcolumn(col, DF)
     n = size(DF.A, 1)
     valtonum = Dict()
     vals = Any[]
@@ -146,8 +167,8 @@ function colvalues(DF::DFrame, col)
 end
 
 # map a column according to valtonum
-function coltointegers(DF::DFrame, col, valtonum)
-    j = colnum(DF, col)
+function columntointegers(DF::DFrame, col, valtonum)
+    j = findcolumn(col, DF)
     n = size(DF.A, 1)
     u = zeros(n)
     for i=1:n
@@ -158,7 +179,7 @@ end
 
 # valtonum is a dict mapping strings to 1...d
 function coltoonehot(DF::DFrame, col, valtonum)
-    j = colnum(DF, col)
+    j = findcolumn(col, DF)
     n = size(DF.A, 1)
     d = length(valtonum)
     u = zeros(n,d)
@@ -169,88 +190,126 @@ function coltoonehot(DF::DFrame, col, valtonum)
 end
 
 
-##############################################################################
+#######################################################################
 
 abstract type FeatureMap end
+
+##############################
+
 mutable struct AddColumnFmap<:FeatureMap
-    col  # source column name or number
-    name # destination name, may be nothing
+    src    # source column name or number
+    dest   # destination name, may be nothing
 end
 
-function applyfmap(FM::AddColumnFmap, inframe, outframe)
-    sourcedf, j =  col2(FM.col, inframe, outframe)
-    u  = numcol(sourcedf, j)
-    appendcol(outframe, u, FM.name)
+function applyfmap(FM::AddColumnFmap, uvframe, xyframe)
+    srcframe, srccol =  findcolumn(FM.src, uvframe, xyframe)
+    u  = columnvalues(srcframe, srccol)
+    appendcol(xyframe, FM.dest, u)
 end
 
+# map from dest to src
+function invertfmap(FM::AddColumnFmap, uvframe, xyframe)
+    destcol = findcolumn(FM.dest, xyframe)
+    x = columnvalues(xyframe, destcol)
+    srcframe, srccol = findcolumn(FM.src, uvframe, xyframe)
+    appendcol(srcframe, FM.src, x)
+end
+
+##############################
 
 mutable struct OneHotFmap<:FeatureMap
-    col  # source column name or number
-    name # destination name, may be nothing
+    src  # source column name or number
+    dest # destination name, may be nothing
     standardize  # true if standardized
+    used # if been standardized before
+    mean 
+    std 
 end
 
-function applyfmap(FM::OneHotFmap, inframe, outframe)
-    sourcedf, j =  col2(FM.col, inframe, outframe)
-    valtonum, vals = colvalues(sourcedf, j)
-    u = coltoonehot(sourcedf, j, valtonum)
+OneHotFmap(c,n,s) = OneHotFmap(c,n,s,false,nothing,nothing)
+
+function applyfmap(FM::OneHotFmap, uvframe, xyframe)
+    srcframe, srccol =  findcolumn(FM.src, uvframe, xyframe)
+    valtonum, vals = uniquecolumnvalues(srcframe, srccol)
+    u = coltoonehot(srcframe, srccol, valtonum)
     if FM.standardize
+        if !FM.used
+            FM.mean = mean(u,1)
+            FM.std = std(u,1)
+            FM.used = true
+        end
         n = size(u,1)
-        m = mean(u,1)
-        s = std(u,1)
-        u = (u - repmat(m, n, 1))./repmat(s,n,1)
+        u = (u - repmat(FM.mean, n, 1))./repmat(FM.std,n,1)
     end
-    appendcol(outframe, u, FM.name)
+    appendcol(xyframe, FM.dest, u)
 end
 
-
+##############################
 
 mutable struct OrdinalFmap<:FeatureMap
-    col  # source column name or number
-    name # destination name, may be nothing
+    src   # source column name or number
+    dest  # destination name, may be nothing
     categories
 end
 
-function applyfmap(FM::OrdinalFmap, inframe, outframe)
-    sourcedf, j =  col2(FM.col, inframe, outframe)
+function applyfmap(FM::OrdinalFmap, uvframe, xyframe)
+    srcframe, srccol =  findcolumn(FM.src, uvframe, xyframe)
     valtonum = Dict()
     for i=1:length(FM.categories)
         valtonum[FM.categories[i]] = i
     end
-    u = coltointegers(sourcedf, j, valtonum)
-    appendcol(outframe, u, FM.name)
+    u = columntointegers(srcframe, srccol, valtonum)
+    appendcol(xyframe, FM.dest, u)
 end
 
-
-
-
+##############################
 
 mutable struct FunctionFmap<:FeatureMap
-    col  # source column name or number
-    name # destination name, may be nothing
+    src   # source column name or number
+    dest  # destination name, may be nothing
     f
+    finv
 end
 
-function applyfmap(FM::FunctionFmap, inframe, outframe)
-    sourcedf, j =  col2(FM.col, inframe, outframe)
-    u  = numcol(sourcedf, j)
+function FunctionFmap(src, dest, f)
+    if f == log
+        finv = exp
+    else
+        finv = nothing
+    end
+    return FunctionFmap(src, dest, f, finv)
+end
+
+function applyfmap(FM::FunctionFmap, uvframe, xyframe)
+    srcframe, srccol =  findcolumn(FM.src, uvframe, xyframe)
+    u  = columnvalues(srcframe, srccol)
     unew = [ FM.f(x) for x in u]
-    appendcol(outframe, unew, FM.name)
+    appendcol(xyframe, FM.dest, unew)
+end
+
+# maps dest to src
+function invertfmap(FM::FunctionFmap, uvframe, xyframe)
+    destcol = findcolumn(FM.dest, xyframe)
+    x = columnvalues(xyframe, destcol)
+    u = [ FM.finv(a) for a in x ]
+    srcframe, srccol = findcolumn(FM.src, uvframe, xyframe)
+    appendcol(srcframe, FM.src, u)
 end
 
 
+##############################################################################
 
 mutable struct FunctionListFmap<:FeatureMap
-    col  # list of source column names or numbers
-    name # destination name, may be nothing
+    src  # list of source column names or numbers
+    dest # destination name, may be nothing
     f
 end
 
-function applyfmap(FM::FunctionListFmap, inframe, outframe)
+function applyfmap(FM::FunctionListFmap, uvframe, xyframe)
     args = Any[]
-    for a in FM.col
-        sourcedf, j =  col2(a, inframe, outframe)
-        u  = numcol(sourcedf, j)
+    for srci in FM.src
+        srcframe, srccol =  findcolumn(srci, uvframe, xyframe)
+        u  = columnvalues(srcframe, srccol)
         push!(args, u)
     end
     n = length(args[1])
@@ -262,76 +321,57 @@ function applyfmap(FM::FunctionListFmap, inframe, outframe)
         end
         unew[i]  = FM.f(a2...)
     end
-    appendcol(outframe, unew, FM.name)
+    appendcol(xyframe, FM.dest, unew)
 end
 
-
+##############################
 
 mutable struct StandardizeFmap<:FeatureMap
-    col  # source column name or number
-    name # destination name, may be nothing
+    src  # source column name or number
+    dest # destination name, may be nothing
     mean
     std
+    used
 end
 
-function applyfmap(FM::StandardizeFmap, inframe, outframe)
-    sourcedf, j =  col2(FM.col, inframe, outframe)
-    u  = numcol(sourcedf, j)
-    FM.mean = mean(u)
-    FM.std = std(u)
+function applyfmap(FM::StandardizeFmap, uvframe, xyframe)
+    srcframe, srccol =  findcolumn(FM.src, uvframe, xyframe)
+    u  = columnvalues(srcframe, srccol)
+    if !FM.used
+        FM.mean = mean(u)
+        FM.std = std(u)
+        FM.used = true
+    end
     unew = (u - FM.mean)/FM.std
-    appendcol(outframe, unew, FM.name)
+    appendcol(xyframe, FM.dest, unew)
 end
 
-function StandardizeFmap(col, name)
-    return StandardizeFmap(col, name, nothing, nothing)
+# map dest to src
+function invertfmap(FM::StandardizeFmap, uvframe, xyframe)
+    destcol = findcolumn(FM.dest, xyframe)
+    x = columnvalues(xyframe, destcol)
+    u = FM.std*x + FM.mean
+    srcframe, srccol = findcolumn(FM.src, uvframe, xyframe)
+    appendcol(srcframe, FM.src, u)
+end
+    
+function StandardizeFmap(src, dest)
+    return StandardizeFmap(src, dest, nothing, nothing, false)
 end
 
-
-
-
+##############################
 
 mutable struct OneFmap<:FeatureMap
-    name # destination name, may be nothing
+    dest # destination name, may be nothing
 end
 
-function applyfmap(FM::OneFmap, inframe, outframe)
-    n = size(inframe.A, 1)
+function applyfmap(FM::OneFmap, uvframe, xyframe)
+    n = size(uvframe.A, 1)
     u = ones(n)
-    appendcol(outframe, u, FM.name)
+    appendcol(xyframe, FM.dest, u)
 end
-
-
-
-
 
 ##############################################################################
-mutable struct FrameSource<:DataSource
-    Uf
-    Vf
-    Xmaps
-    Ymaps
-    count
-end
-
-function FrameSource(Uf::DFrame, Vf::DFrame)
-    return FrameSource(Uf, Vf, Any[], Any[], [0])
-end
-
-function makeFrameSource(U, V, Unames, Vnames)
-    Uf = DFrame(U, Unames)
-    Vf = DFrame(V, Vnames)
-    return FrameSource(Uf, Vf)
-end
-
-
-function makeFrameSource(U, V)
-    Uf = DFrame(U)
-    Vf = DFrame(V)
-    return FrameSource(Uf, Vf)
-end
-
-
     
 function getfeature(col; name = nothing, etype="number",
                     categories = nothing,
@@ -355,7 +395,8 @@ function getfeature(col; name = nothing, etype="number",
     end
 end
                     
-function addfeaturex(fmaps, count, col; stand=true, name=nothing, etype="number", kwargs...)
+function addfeaturex(fmaps, count, col;
+                     stand=true, name=nothing, etype="number", kwargs...)
     # make sure every feature has a name
     if name == nothing
         name = "feature$(count[1])"
@@ -364,14 +405,12 @@ function addfeaturex(fmaps, count, col; stand=true, name=nothing, etype="number"
     fe = getfeature(col; name=name, etype=etype, kwargs...)
     push!(fmaps, fe)
     if stand && etype != "onehot" && etype != "one" && etype != "onehotstd"
-        # add a featurizer that replaces the feature with name = name
-        # with a standardized version
+        # add a featurizer that replaces the feature with
+        # with a standardized version that has the same name
         addfeaturex(fmaps, count, name;
                       etype="standardize", stand=false, name=name, kwargs...)
     end
 end
-
-   
 
 
 function addfeatureU(F::FrameSource, col; kwargs...)
@@ -384,22 +423,36 @@ end
 
 
 
-function getXY(F::FrameSource)
-    Xf = applyfmaplist(F.Xmaps, F.Uf)
-    Yf = applyfmaplist(F.Ymaps, F.Vf)
-    X = Xf.A
-    Y = Yf.A
-    hasconstfeature = false
-    return X, Y, hasconstfeature
-end
-
-function applyfmaplist(fmaps, inframe)
-    n = size(inframe.A,1)
-    outframe = DFrame(n)
+function applyfmaplist(fmaps, uvframe)
+    n = size(uvframe.A,1)
+    xyframe = DFrame(n)
     ne = length(fmaps)
     for i=1:ne
-        applyfmap(fmaps[i], inframe, outframe)
+        applyfmap(fmaps[i], uvframe, xyframe)
     end
-    return outframe
+    return xyframe
+end
+
+function unembedY(F::FrameSource, y::Array{Float64,1})
+    Y = reshape(y, 1, length(y))
+    unembedY(F, Y)
+end
+
+function unembedY(F::FrameSource, Y::Array{Float64,2})
+    Yf = DFrame(Y, F.Ynames)
+    d = size(F.Vf.A,2)
+    n = size(Y,1)
+    Vf = DFrame(zeros(n,d), F.Vf.names)
+    invertfmaplist(F.Ymaps, Yf, Vf)
+    V = Vf.A
+    return V
+end
+
+function invertfmaplist(fmaps, xyframe, uvframe)
+    n = size(xyframe.A,1)
+    ne = length(fmaps)
+    for i=ne:-1:1
+        invertfmap(fmaps[i], uvframe, xyframe)
+    end
 end
 
