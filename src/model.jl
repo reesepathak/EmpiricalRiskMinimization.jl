@@ -179,7 +179,7 @@ end
 function defaultembedding(M::Model; stand=true)
     addfeatureV(M, 1, stand=stand)
     addfeatureU(M, etype="one")
-    d = size(Uall(M),2) 
+    d = size(getU(M),2) 
     for i=1:d
         addfeatureU(M, i, stand=stand)
     end

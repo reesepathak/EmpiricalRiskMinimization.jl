@@ -65,6 +65,15 @@ function makeFrameSource(U, V)
     return FrameSource(Uf, Vf)
 end
 
+function containsone(fmaps)
+    for a in fmaps
+        if isa(a, OneFmap)
+            return true
+        end
+    end
+    return false
+end
+
 function getXY(F::FrameSource)
     Xf = applyfmaplist(F.Xmaps, F.Uf)
     Yf = applyfmaplist(F.Ymaps, F.Vf)
@@ -72,14 +81,14 @@ function getXY(F::FrameSource)
     Y = Yf.A
     F.Xnames = Xf.names
     F.Ynames = Yf.names
-    hasconstfeature = false
+    hasconstfeature = containsone(F.Xmaps)
     return X, Y, hasconstfeature
 end
 
 
 
 getU(F::FrameSource) = F.Uf.A
-getV(S::FrameSource) = F.Vf.A
+getV(F::FrameSource) = F.Vf.A
 
 # embed one data record
 function embedU(F::FrameSource, u::Array{Float64,1})
@@ -297,7 +306,7 @@ function invertfmap(FM::FunctionFmap, uvframe, xyframe)
 end
 
 
-##############################################################################
+###########################################
 
 mutable struct FunctionListFmap<:FeatureMap
     src  # list of source column names or numbers

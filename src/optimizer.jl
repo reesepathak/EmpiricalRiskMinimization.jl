@@ -25,6 +25,8 @@ getsolver(L::Loss, R::Regularizer) = Fista()
 
 getsolver(L::HuberLoss, R::L2Reg) = CvxSolver()
 getsolver(L::DeadzoneLoss, R::L2Reg) = CvxSolver()
+getsolver(L::AbsoluteLoss, R::L2Reg) = CvxSolver()
+getsolver(L::TiltedLoss, R::L2Reg) = CvxSolver()
 
 ##############################################################################
 # CVX for huber
@@ -32,11 +34,48 @@ getsolver(L::DeadzoneLoss, R::L2Reg) = CvxSolver()
 function solve(s::CvxSolver, L::HuberLoss, R::L2Reg, regweights,
                X, Y, lambda,  theta_guess=nothing)
     n,d = size(X)
+    A = diagm(regweights)
     theta = Convex.Variable(d)
     s = Convex.Variable(n)
-    problem = Convex.minimize( (1/n)*sum(s))
+    problem = Convex.minimize( sum(s)/n  + lambda*quadform(theta, A)  )
     for i=1:n
         problem.constraints +=    s[i] >= huber(X[i,:]'*theta - Y[i], L.alpha)
+    end
+    solve!(problem)
+    return theta.value
+end
+
+
+
+
+
+function solve(s::CvxSolver, L::AbsoluteLoss, R::L2Reg, regweights,
+               X, Y, lambda,  theta_guess=nothing)
+    n,d = size(X)
+    A = diagm(regweights)
+    theta = Convex.Variable(d)
+    s = Convex.Variable(n)
+    problem = Convex.minimize( sum(s)/n + lambda*quadform(theta, A)   )
+    for i=1:n
+        problem.constraints +=    s[i] >= abs(X[i,:]'*theta - Y[i])
+    end
+    solve!(problem)
+    return theta.value
+end
+
+
+function solve(s::CvxSolver, L::TiltedLoss, R::L2Reg, regweights,
+               X, Y, lambda,  theta_guess=nothing)
+    n,d = size(X)
+    A = diagm(regweights)
+    theta = Convex.Variable(d)
+    s = Convex.Variable(n)
+    e = Convex.Variable(n)
+    problem = Convex.minimize( sum(s)/n  + lambda*quadform(theta, A)  )
+    for i=1:n
+        problem.constraints +=    e[i] == X[i,:]'*theta - Y[i]
+        problem.constraints +=    s[i] >= L.tau*e[i]
+        problem.constraints +=    s[i] >= (L.tau-1)*e[i]
     end
     solve!(problem)
     return theta.value
@@ -46,17 +85,16 @@ end
 function solve(s::CvxSolver, L::DeadzoneLoss, R::L2Reg, regweights,
                X, Y, lambda,  theta_guess=nothing)
     n,d = size(X)
+    A = diagm(regweights)
     theta = Convex.Variable(d)
     s = Convex.Variable(n)
-    problem = Convex.minimize( (1/n)*sum(s))
+    problem = Convex.minimize( (1/n)*sum(s)  + lambda*quadform(theta, A) )
     for i=1:n
         problem.constraints +=    s[i] >= max(abs(X[i,:]'*theta - Y[i]) - L.alpha, 0)
     end
     solve!(problem)
     return theta.value
 end
-
-
 
 ##############################################################################
 # QR for quadratic case

@@ -30,6 +30,30 @@ function derivloss(L::AbsoluteLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return sign.(yhat - y)
 end
 
+#########################################
+# Tilted Loss
+#########################################
+struct TiltedLoss <: LossNonDiff
+    tau
+end
+
+# only defined for scalars
+function loss(L::TiltedLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    if length(y)>1
+        error("tilted loss only applies to scalars")
+    end
+    e = yhat[1] - y[1]
+    return 0.5*abs(e) + (L.tau - 0.5)*e
+end
+
+function derivloss(L::TiltedLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    e = yhat[1] - y[1]
+    if e>0
+        return L.tau
+    end
+    return L.tau - 1
+end
+
 
 #########################################
 # Hinge Loss
