@@ -9,6 +9,14 @@ struct DefaultSolver <: Solver end
 struct CvxSolver <: Solver
     verbose
 end
+
+struct ProxGradientSolver <: Solver
+    thetas
+    gammas
+    fgs
+end
+ProxGradientSolver() = ProxGradientSolver(nothing, nothing, nothing)
+
 CvxSolver() = CvxSolver(false)
 
 
@@ -158,6 +166,82 @@ function lsreg(X, Y, lambda, regweights)
     Yh = [Y; zeros(d)]
     theta = ls(Xh,Yh)
 end
+##############################################################################
+
+
+function solve(s::ProxGradientSolver, L::Loss, R::Regularizer,
+               regweights, X, Y, regparam; theta_guess = nothing)
+    # params
+    max_iters = 1000
+    gamma_initial = 0.1
+    stopchange = 1e-4
+
+    # useful stuff
+    f(theta) = loss(L, matrix(X*theta), Y)
+    g(theta) = regparam*reg(R, theta)
+    gradf(theta) = X'*derivloss(L, matrix(X*theta), Y)
+    
+    d = size(X,2)
+
+    # buffers
+    thetas = zeros(d, max_iters)
+    gammas = zeros(d)
+    fgs = zeros(d)
+
+    # initial conditions
+    if theta_guess != nothing
+        theta_initial = theta_guess
+    else
+        theta_initial = zeros(d)
+    end
+
+    # store first step
+    thetas[:,1] = theta_initial
+    gammas[1] = gamma_initial
+    fgs[1] = f(theta_initial) + g(theta_initial)
+
+    # make inner loop variables accessible
+    gamma_next = 0.0
+    theta_next = zeros(d)
+    fg_next = 0.0
+    k=1
+    
+    # loop
+    for k=1:max_iters-1
+        gamma = gammas[k]
+        theta = thetas[:,k]
+        fg = fgs[k]
+
+        # line search
+        while true
+            v = theta - gradf(theta)/(2*gamma)
+            theta_next = prox(R, gamma, regweights, v)
+            fg_next = f(theta_next) + g(theta_next)
+            if fg_next < fg
+                # increase the step size and move to next step
+                gamma_next = gamma/1.2
+                break
+            else
+                # decrease the step size and try again
+                gamma = gamma*2
+            end
+        end
+        # save the variables
+        thetas[:,k+1] = theta_next
+        gammas[k+1] = gamma_next
+        fg[k+1] = fg_next
+        
+        # stopping criterion
+        if fg[k] - fg[k+1] < stopdelta
+            break
+        end
+    end
+    s.thetas = thetas[:,1:k+1]
+    s.gammas = gammas[1:k+1]
+    s.fgs = fgs[1:k+1]
+    return theta
+end
+
 
 ##############################################################################
 # Fista

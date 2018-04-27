@@ -1,31 +1,61 @@
 
 abstract type Regularizer end
 
+# regularizers are separable
+function reg(R::Regularizer, theta::Array{Float64,1})
+    s = 0.0
+    for i=1:length(theta)
+        s += reg(R, theta[i])
+    end
+    return s
+end
+
+# construct prox of vector by applying prox elementwise
+# include regweights
+function prox(R::Regularizer, gamma::Float64,
+              regweights::Array{Float64, 1},
+              v::Array{Float64,1})
+    n = length(v)
+    p = zeros(v)
+    for i=1:n
+        if regweights[i] > 0
+            p[i] = prox(R,  gamma/regweights[i], v[i])
+        else
+            p[i] = v[i]
+        end
+    end
+    return p
+end
+
 #########################################
 # L1 Regularizer
 #########################################
 struct L1Reg <: Regularizer end
 
-regul(R::L1Reg, u) = norm(u, 1)
+reg(R::L1Reg, a::Float64) = abs(a)
 
-function prox(R::L1Reg, grad_step, t)
-    return sign.(grad_step).*max.(0, abs.(grad_step) - t)
+# returns arg min ( R(x) + gamma*\norm(x-v) )
+function prox(R::L1Reg, gamma::Float64, v::Float64)
+    s = 0.5/gamma
+    if x > s
+        return x-s
+    elseif x < -s
+        return x+s
+    end
+    return 0
 end
+
+
+
 
 #########################################
 # L2 Regularizer
 #########################################
+
 struct L2Reg <: Regularizer end
+reg(R::L2Reg, a::Float64) = a*a
+prox(R::L2Reg, gamma::Float64, v::Float64) = v*gamma/(1+gamma)
 
-regul(R::L2Reg, u) = dot(u,u)
-
-function prox(R::L2Reg, grad_step, t)
-    n = norm(grad_step)
-    if n == 0
-        return zeros(length(grad_step))
-    end
-    return max((n - t)/n, 0) * grad_step
-end
 
 #########################################
 # L2 Regularizer

@@ -288,7 +288,7 @@ end
 # fit
 
 function trainx(M::Model, lambda, Xtrain, Xtest, Ytrain, Ytest; theta_guess = nothing)
-    setsolver(M)
+    assignsolver(M)
     theta = solve(M.solver, M.loss, M.regularizer, M.regweights, Xtrain, Ytrain, lambda;
                   theta_guess = theta_guess)
     trainloss = loss(M.loss, predict(M, Xtrain, theta), Ytrain)
@@ -354,7 +354,7 @@ end
 
 ##############################################################################
 
-function setsolver(M::Model, force=false)
+function assignsolver(M::Model, force=false)
     if force || isa(M.solver, DefaultSolver) 
         M.solver = getsolver(M.loss, M.regularizer)
     end
@@ -383,13 +383,16 @@ end
 
 function setloss(M::Model, l)
     M.loss = l
-    setsolver(M, true)
+    assignsolver(M, true)
 end
 function setreg(M::Model, r)
     M.regularizer = r
-    setsolver(M, true)
+    assignsolver(M, true)
 end
-
+function setsolver(M::Model, s)
+    M.solver = s
+end
+    
 
 
 ##############################################################################

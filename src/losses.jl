@@ -160,4 +160,14 @@ function loss(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2})
     return l/n
 end
 
+# returns Jacobian matrix
+function derivloss(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2})
+    l = 0
+    n = length(Yhat)
+    for i=1:n
+        l += derivloss(L, Yhat[i,:], Y[i,:])
+    end
+    return l/n
+end
+
 ############################################################################## 
