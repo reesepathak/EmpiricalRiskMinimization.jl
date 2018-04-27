@@ -28,6 +28,28 @@ function prox(R::L2Reg, grad_step, t)
 end
 
 #########################################
+# L2 Regularizer
+#########################################
+struct SqrtReg <: Regularizer end
+
+regul(R::SqrtReg, u) = sqrt(abs(u))
+
+function prox(R::SqrtReg, grad_step, t)
+    return 1
+end
+
+#########################################
+# Nonneg Regularizer
+#########################################
+struct NonnegReg <: Regularizer end
+
+regul(R::NonnegReg, u) = 0
+
+function prox(R::NonnegReg, grad_step, t)
+    return 1
+end
+
+#########################################
 # Elastic net regularizer
 #########################################
 struct L1L2Reg <: Regularizer

@@ -1,12 +1,15 @@
 
 using Convex
+using SCS
 
 abstract type Solver end
 
 struct QRSolver <: Solver end
 struct DefaultSolver <: Solver end
-struct CvxSolver <: Solver end
-
+struct CvxSolver <: Solver
+    verbose
+end
+CvxSolver() = CvxSolver(false)
 
 
 mutable struct FistaSolver <: Solver
@@ -21,6 +24,9 @@ FistaSolver() = FistaSolver(Any[])
 # since we want to use one solver for the entire
 # regularization path
 getsolver(L::SquareLoss, R::L2Reg) = QRSolver()
+getsolver(L::SquareLoss, R::L1Reg) = CvxSolver()
+getsolver(L::SquareLoss, R::NonnegReg) = CvxSolver()
+
 getsolver(L::Loss, R::Regularizer) = Fista()
 
 getsolver(L::HuberLoss, R::L2Reg) = CvxSolver()
@@ -32,7 +38,7 @@ getsolver(L::TiltedLoss, R::L2Reg) = CvxSolver()
 # CVX for huber
 
 function solve(s::CvxSolver, L::HuberLoss, R::L2Reg, regweights,
-               X, Y, lambda,  theta_guess=nothing)
+               X, Y, lambda;  theta_guess=nothing)
     n,d = size(X)
     A = diagm(regweights)
     theta = Convex.Variable(d)
@@ -41,7 +47,7 @@ function solve(s::CvxSolver, L::HuberLoss, R::L2Reg, regweights,
     for i=1:n
         problem.constraints +=    s[i] >= huber(X[i,:]'*theta - Y[i], L.alpha)
     end
-    solve!(problem)
+    solve!(problem, SCSSolver(verbose=s.verbose))
     return theta.value
 end
 
@@ -50,7 +56,7 @@ end
 
 
 function solve(s::CvxSolver, L::AbsoluteLoss, R::L2Reg, regweights,
-               X, Y, lambda,  theta_guess=nothing)
+               X, Y, lambda;  theta_guess=nothing)
     n,d = size(X)
     A = diagm(regweights)
     theta = Convex.Variable(d)
@@ -59,48 +65,70 @@ function solve(s::CvxSolver, L::AbsoluteLoss, R::L2Reg, regweights,
     for i=1:n
         problem.constraints +=    s[i] >= abs(X[i,:]'*theta - Y[i])
     end
-    solve!(problem)
+    solve!(problem, SCSSolver(verbose=s.verbose))
     return theta.value
 end
 
 
 function solve(s::CvxSolver, L::TiltedLoss, R::L2Reg, regweights,
-               X, Y, lambda,  theta_guess=nothing)
+               X, Y, lambda;  theta_guess=nothing)
     n,d = size(X)
     A = diagm(regweights)
     theta = Convex.Variable(d)
-    s = Convex.Variable(n)
+    s1 = Convex.Variable(n)
     e = Convex.Variable(n)
-    problem = Convex.minimize( sum(s)/n  + lambda*quadform(theta, A)  )
+    problem = Convex.minimize( sum(s1)/n  + lambda*quadform(theta, A)  )
     for i=1:n
         problem.constraints +=    e[i] == X[i,:]'*theta - Y[i]
-        problem.constraints +=    s[i] >= L.tau*e[i]
-        problem.constraints +=    s[i] >= (L.tau-1)*e[i]
+        problem.constraints +=    s1[i] >= L.tau*e[i]
+        problem.constraints +=    s1[i] >= (L.tau-1)*e[i]
     end
-    solve!(problem)
+    solve!(problem, SCSSolver(verbose=s.verbose))
     return theta.value
 end
 
 
 function solve(s::CvxSolver, L::DeadzoneLoss, R::L2Reg, regweights,
-               X, Y, lambda,  theta_guess=nothing)
+               X, Y, lambda;  theta_guess=nothing)
     n,d = size(X)
     A = diagm(regweights)
     theta = Convex.Variable(d)
-    s = Convex.Variable(n)
-    problem = Convex.minimize( (1/n)*sum(s)  + lambda*quadform(theta, A) )
+    s1 = Convex.Variable(n)
+    problem = Convex.minimize( (1/n)*sum(s1)  + lambda*quadform(theta, A) )
     for i=1:n
-        problem.constraints +=    s[i] >= max(abs(X[i,:]'*theta - Y[i]) - L.alpha, 0)
+        problem.constraints +=    s1[i] >= max(abs(X[i,:]'*theta - Y[i]) - L.alpha, 0)
     end
-    solve!(problem)
+    solve!(problem, SCSSolver(verbose=s.verbose))
     return theta.value
 end
 
+function solve(s::CvxSolver, L::SquareLoss, R::L1Reg, regweights,
+               X, Y, lambda;  theta_guess=nothing)
+    n,d = size(X)
+    A = diagm(regweights)
+    theta = Convex.Variable(d)
+    problem = Convex.minimize( (1/n)*sumsquares(X*theta - Y)  + lambda*norm(A*theta, 1) )
+    solve!(problem, SCSSolver(verbose=s.verbose))
+    return theta.value
+end
+
+function solve(s::CvxSolver, L::SquareLoss, R::NonnegReg, regweights,
+               X, Y, lambda;  theta_guess=nothing)
+    n,d = size(X)
+    A = diagm(regweights)
+    theta = Convex.Variable(d)
+    problem = Convex.minimize( (1/n)*sumsquares(X*theta - Y) )
+    for i=1:d
+        problem.constraints +=    regweights[i]*theta[i] >= 0
+    end
+    solve!(problem, SCSSolver(verbose=s.verbose))
+    return theta.value
+end
 ##############################################################################
 # QR for quadratic case
 
 function solve(s::QRSolver, L::SquareLoss, R::L2Reg, regweights,
-               X, Y, lambda, theta_guess=nothing)
+               X, Y, lambda; theta_guess=nothing)
     return lsreg(X, Y, lambda, regweights)
 end
 
@@ -135,7 +163,7 @@ end
 # Fista
 
 function solve(s::FistaSolver, L::Loss, R::Regularizer, regweights,
-               X, Y, lambda, theta_guess=nothing)
+               X, Y, lambda; theta_guess=nothing)
     beta=0.8
     alpha=0.5
     init=theta_guess
