@@ -12,9 +12,14 @@ function loss(L::SquareLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return dot(yhat - y, yhat-y)
 end
 
-# derivative wrt yhat
+# gradient wrt yhat
+# returns the transpose of the derivative
 function derivloss(L::SquareLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return 2*(yhat - y)
+end
+
+function cvxloss(L::SquareLoss,  yhat, y)
+    return sumsquares(yhat - y)
 end
 
 #########################################
@@ -29,6 +34,11 @@ end
 function derivloss(L::AbsoluteLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return sign.(yhat - y)
 end
+
+function cvxloss(L::AbsoluteLoss,  yhat, y)
+    return abs(yhat - y)
+end
+
 
 #########################################
 # Tilted Loss
@@ -54,6 +64,10 @@ function derivloss(L::TiltedLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return L.tau - 1
 end
 
+function cvxloss(L::TiltedLoss, yhat, y)
+    e = yhat - y
+    return 0.5*abs(e) + (L.tau - 0.5)*e
+end
 
 #########################################
 # Hinge Loss
@@ -98,17 +112,18 @@ function loss(L::HuberLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
 end
 
 
-# todo: fix this
 function derivloss(L::HuberLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
-    u = yhat - y
-    ind_sq = abs.(u) .<= L.delta
-    ind_abs = abs.(u) .> L.delta
-    X_sq = ind_sq 
-    X_abs = ind_abs 
-    sq_deriv = X_sq'*X_sq - X_sq'*y
-    abs_deriv = L.delta*sum(sign.(u) .* X_abs, 1)'
-    return sq_deriv + abs_deriv
+    u = yhat[1] - y[1]
+    if abs(u) < L.alpha
+        return 2*u
+    end
+    return 2*L.alpha*sign(u)
 end
+
+function cvxloss(L::HuberLoss,  yhat, y)
+    return huber(yhat - y, L.alpha)
+end
+
 
 ##############################################################################
 # Nonconvex Huber
@@ -148,6 +163,12 @@ function loss(L::DeadzoneLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return max(abs(u)-L.alpha, 0)
 end
 
+function cvxloss(L::DeadzoneLoss,  yhat, y)
+    e = yhat - y
+    return max(abs(e)- L.alpha, 0)
+end
+
+
 ##############################################################################
 # average loss
 
@@ -156,16 +177,6 @@ function loss(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2})
     n = length(Yhat)
     for i=1:n
         l += loss(L, Yhat[i,:], Y[i,:])
-    end
-    return l/n
-end
-
-# returns Jacobian matrix
-function derivloss(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2})
-    l = 0
-    n = length(Yhat)
-    for i=1:n
-        l += derivloss(L, Yhat[i,:], Y[i,:])
     end
     return l/n
 end

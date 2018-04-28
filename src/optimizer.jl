@@ -8,24 +8,21 @@ struct QRSolver <: Solver end
 struct DefaultSolver <: Solver end
 struct CvxSolver <: Solver
     verbose
+    eps
 end
 
-struct ProxGradientSolver <: Solver
+mutable struct ProxGradientSolver <: Solver
+    verbose
+    eps
     thetas
     gammas
     fgs
 end
-ProxGradientSolver() = ProxGradientSolver(nothing, nothing, nothing)
+ProxGradientSolver() = ProxGradientSolver(false, 1e-5, nothing, nothing, nothing)
+ProxGradientSolver(verbose, eps) = ProxGradientSolver(verbose, eps, nothing, nothing, nothing)
 
-CvxSolver() = CvxSolver(false)
+CvxSolver() = CvxSolver(true, 1e-5)
 
-
-mutable struct FistaSolver <: Solver
-    # every solve appends a dict to the list of solves
-    # the dict contains solver steps and info
-    solves
-end
-FistaSolver() = FistaSolver(Any[])
 
 # we query for the solver when the user has
 # asked for the default. We don't use Julia dispatch on type Solver
@@ -34,104 +31,47 @@ FistaSolver() = FistaSolver(Any[])
 getsolver(L::SquareLoss, R::L2Reg) = QRSolver()
 getsolver(L::SquareLoss, R::L1Reg) = CvxSolver()
 getsolver(L::SquareLoss, R::NonnegReg) = CvxSolver()
-
-getsolver(L::Loss, R::Regularizer) = Fista()
-
 getsolver(L::HuberLoss, R::L2Reg) = CvxSolver()
+getsolver(L::HuberLoss, R::L1Reg) = CvxSolver()
 getsolver(L::DeadzoneLoss, R::L2Reg) = CvxSolver()
 getsolver(L::AbsoluteLoss, R::L2Reg) = CvxSolver()
+getsolver(L::AbsoluteLoss, R::L1Reg) = CvxSolver()
 getsolver(L::TiltedLoss, R::L2Reg) = CvxSolver()
 
 ##############################################################################
 # CVX for huber
 
-function solve(s::CvxSolver, L::HuberLoss, R::L2Reg, regweights,
-               X, Y, lambda;  theta_guess=nothing)
+function solve(S::CvxSolver, L, R, regweights, X, Y, lambda;
+                  theta_guess=nothing)
     n,d = size(X)
-    A = diagm(regweights)
+    println("n = ", n, " d = ", d)
     theta = Convex.Variable(d)
-    s = Convex.Variable(n)
-    problem = Convex.minimize( sum(s)/n  + lambda*quadform(theta, A)  )
+    # we shouldn't need to specify Positive here, but
+    # Convex.jl is unreliable without it
+    losses = Convex.Variable(n, Positive())
+    regs = Convex.Variable(d, Positive())
+    problem = Convex.minimize( sum(losses)/n  + sum(regs))
     for i=1:n
-        problem.constraints +=    s[i] >= huber(X[i,:]'*theta - Y[i], L.alpha)
+        problem.constraints +=    losses[i] >= cvxloss(L, X[i,:]'*theta,  Y[i])
     end
-    solve!(problem, SCSSolver(verbose=s.verbose))
-    return theta.value
-end
-
-
-
-
-
-function solve(s::CvxSolver, L::AbsoluteLoss, R::L2Reg, regweights,
-               X, Y, lambda;  theta_guess=nothing)
-    n,d = size(X)
-    A = diagm(regweights)
-    theta = Convex.Variable(d)
-    s = Convex.Variable(n)
-    problem = Convex.minimize( sum(s)/n + lambda*quadform(theta, A)   )
-    for i=1:n
-        problem.constraints +=    s[i] >= abs(X[i,:]'*theta - Y[i])
+    if isa(R, NonnegReg)
+        for i=1:d
+            if regweights[i] > 0
+                problem.constraints +=    theta[i] >= 0
+            end
+            problem.constraints +=    regs[i] == 0
+        end
+    else
+        for i=1:d
+            problem.constraints +=    regs[i]   >= lambda * regweights[i] * cvxreg(R, theta[i])
+        end
     end
-    solve!(problem, SCSSolver(verbose=s.verbose))
+    solve!(problem, SCSSolver(verbose=S.verbose, eps=S.eps))
     return theta.value
 end
 
 
-function solve(s::CvxSolver, L::TiltedLoss, R::L2Reg, regweights,
-               X, Y, lambda;  theta_guess=nothing)
-    n,d = size(X)
-    A = diagm(regweights)
-    theta = Convex.Variable(d)
-    s1 = Convex.Variable(n)
-    e = Convex.Variable(n)
-    problem = Convex.minimize( sum(s1)/n  + lambda*quadform(theta, A)  )
-    for i=1:n
-        problem.constraints +=    e[i] == X[i,:]'*theta - Y[i]
-        problem.constraints +=    s1[i] >= L.tau*e[i]
-        problem.constraints +=    s1[i] >= (L.tau-1)*e[i]
-    end
-    solve!(problem, SCSSolver(verbose=s.verbose))
-    return theta.value
-end
 
-
-function solve(s::CvxSolver, L::DeadzoneLoss, R::L2Reg, regweights,
-               X, Y, lambda;  theta_guess=nothing)
-    n,d = size(X)
-    A = diagm(regweights)
-    theta = Convex.Variable(d)
-    s1 = Convex.Variable(n)
-    problem = Convex.minimize( (1/n)*sum(s1)  + lambda*quadform(theta, A) )
-    for i=1:n
-        problem.constraints +=    s1[i] >= max(abs(X[i,:]'*theta - Y[i]) - L.alpha, 0)
-    end
-    solve!(problem, SCSSolver(verbose=s.verbose))
-    return theta.value
-end
-
-function solve(s::CvxSolver, L::SquareLoss, R::L1Reg, regweights,
-               X, Y, lambda;  theta_guess=nothing)
-    n,d = size(X)
-    A = diagm(regweights)
-    theta = Convex.Variable(d)
-    problem = Convex.minimize( (1/n)*sumsquares(X*theta - Y)  + lambda*norm(A*theta, 1) )
-    solve!(problem, SCSSolver(verbose=s.verbose))
-    return theta.value
-end
-
-function solve(s::CvxSolver, L::SquareLoss, R::NonnegReg, regweights,
-               X, Y, lambda;  theta_guess=nothing)
-    n,d = size(X)
-    A = diagm(regweights)
-    theta = Convex.Variable(d)
-    problem = Convex.minimize( (1/n)*sumsquares(X*theta - Y) )
-    for i=1:d
-        problem.constraints +=    regweights[i]*theta[i] >= 0
-    end
-    solve!(problem, SCSSolver(verbose=s.verbose))
-    return theta.value
-end
 ##############################################################################
 # QR for quadratic case
 
@@ -143,10 +83,10 @@ end
 
 # inputs:
 #    X        n by d
-#    y        n vector
+#    y        n by 1 
 #
 # returns:
-#    theta:   d vector
+#    theta:   d by 1 vector
 #
 function ls(X,Y)
     Q,R = qr(X)
@@ -155,38 +95,55 @@ function ls(X,Y)
 end
 
 
-#
-# this doesn't regularize the first component of theta
-# todo: need to make this optional
-#
 function lsreg(X, Y, lambda, regweights)
     d = size(X,2)
-    A = diagm(regweights)
-    Xh = [X; sqrt(lambda)*A]
+    A = sqrt(lambda) * diagm(sqrt.(regweights))
+    Xh = [X; A]
     Yh = [Y; zeros(d)]
     theta = ls(Xh,Yh)
 end
 ##############################################################################
 
 
-function solve(s::ProxGradientSolver, L::Loss, R::Regularizer,
+#
+# minimize (1/n) * sum loss(theta^T*x^i, y^i) + lambda*\sum_i regweights[i]*reg(theta_i)
+#
+
+function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
                regweights, X, Y, regparam; theta_guess = nothing)
+
+    # assume Y is n by 1
+
     # params
     max_iters = 1000
     gamma_initial = 0.1
-    stopchange = 1e-4
 
-    # useful stuff
-    f(theta) = loss(L, matrix(X*theta), Y)
-    g(theta) = regparam*reg(R, theta)
-    gradf(theta) = X'*derivloss(L, matrix(X*theta), Y)
-    
+
     d = size(X,2)
+    n = size(X,1)
+   
+    # useful stuff
+    # f = loss(theta)
+    # g = sum(regparam*regweights*reg(theta))
+    #
+    # so we minimize f + g
+    f(theta) = loss(L, matrix(X*theta), Y)
+    g(theta) = reg(R, regparam*regweights, theta)
+    gradf(theta) = dloss(L, matrix(X*theta), Y)
+    proxg(gamma, v) = prox(R, gamma, regparam*regweights, v)
+    function dloss(L, Yhat, Y)
+        dtheta = zeros(d)
+        for i=1:n
+            s = derivloss(L, Yhat[i,:], Y[i,:])[1]
+            dtheta += s*X[i,:]
+        end
+        return dtheta
+    end
 
     # buffers
     thetas = zeros(d, max_iters)
-    gammas = zeros(d)
-    fgs = zeros(d)
+    gammas = zeros(max_iters)
+    fgs = zeros(max_iters)
 
     # initial conditions
     if theta_guess != nothing
@@ -212,12 +169,19 @@ function solve(s::ProxGradientSolver, L::Loss, R::Regularizer,
         theta = thetas[:,k]
         fg = fgs[k]
 
+        # printing
+        if S.verbose
+            @printf("%d   gamma: %f   loss: %f   reg: %f \n", k, gamma, f(theta), g(theta))
+        end
+
         # line search
         while true
             v = theta - gradf(theta)/(2*gamma)
-            theta_next = prox(R, gamma, regweights, v)
+            theta_next = proxg(gamma, v)
             fg_next = f(theta_next) + g(theta_next)
-            if fg_next < fg
+            # should be <= not < else can get stuck if
+            # g is an indicator function
+            if fg_next <= fg
                 # increase the step size and move to next step
                 gamma_next = gamma/1.2
                 break
@@ -229,96 +193,17 @@ function solve(s::ProxGradientSolver, L::Loss, R::Regularizer,
         # save the variables
         thetas[:,k+1] = theta_next
         gammas[k+1] = gamma_next
-        fg[k+1] = fg_next
+        fgs[k+1] = fg_next
         
         # stopping criterion
-        if fg[k] - fg[k+1] < stopdelta
+        if fg - fg_next < S.eps
             break
         end
     end
-    s.thetas = thetas[:,1:k+1]
-    s.gammas = gammas[1:k+1]
-    s.fgs = fgs[1:k+1]
-    return theta
+    S.thetas = thetas[:,1:k+1]
+    S.gammas = gammas[1:k+1]
+    S.fgs = fgs[1:k+1]
+    return matrix(thetas[:,k+1])
 end
 
 
-##############################################################################
-# Fista
-
-function solve(s::FistaSolver, L::Loss, R::Regularizer, regweights,
-               X, Y, lambda; theta_guess=nothing)
-    beta=0.8
-    alpha=0.5
-    init=theta_guess
-    t_init=1.0
-    max_iters=5000
-    tol=1e-4
-    optstatus = fista(M.loss, M.reg, X, y,
-                beta, alpha, init, t_init;
-                max_iters=max_iters, tol=tol)
-    
-    if optstatus == -1
-        return
-    end
-    thetas, losses = opt
-    
-    solverdata = Dict{Any,Any}()
-    solverdata["thetas"] = thetas
-    solverdata["losses"] = losses
-    push!(s.solves, solverdata)
-    
-    return thetas[end]
-end
-
-
-"""
-Main function in ERM package: carries out 
-accelerated proximal (sub)gradient descent. In particular, this is 
-carrying out FISTA, a particular instance of Nesterov's accelerated 
-gradient method.
-"""
-function fista(L::Loss, R::Regularizer, X, y, beta=0.8, alpha=0.5,
-                  init=nothing, t_init=1.0;
-                  max_iters=5000, verbose=true, tol=1e-8)
-    n, d = size(X)
-    decay = (typeof(L) == LossNonDiff) ? true : false
-    println("Solving problem. $n samples, $d features.")
-    # convenience functions
-    LOSS(u) = loss(L, X, y, u);
-    GRAD(u) = derivloss(L, X, y, u)
-    RISK(u) = LOSS(u) + loss(R, u);
-    PROX(u, t) = prox(R, u, t)
-    thetas, zetas, losses = [], [], []
-    if init == nothing
-        init = rand(d)
-    end
-    assert(length(init) == d)
-    push!(thetas, init)
-    push!(zetas, thetas[1])
-    t = t_init
-    for k = 1:max_iters
-        if decay
-            t /= sqrt(k)
-        end
-        lambd = 2/(k + 1)
-        phi = (1 - lambd) * thetas[end] + lambd*zetas[end]
-        z = PROX(phi - t*GRAD(phi), t)
-        while LOSS(z) > LOSS(phi) + dot(GRAD(phi), z - phi) + 1/(2t)*norm(z - phi)^2
-            t *= beta
-            z = PROX(phi - t*GRAD(phi), t)
-        end 
-        push!(thetas, z)
-        push!(zetas, thetas[end - 1] + 1/lambd * (thetas[end] - thetas[end-1]))
-        push!(losses, RISK(thetas[end]))
-        if verbose
-            println("Iteration: $k,  Loss: $(losses[end])")
-        end
-        if k > 4 && maximum(abs.(losses[end-4:end-1] - losses[end-3:end])) < tol
-            println("Done.")
-            return thetas, losses
-        end
-    end
-    print("Did not converge. Loss: $(losses[end])")
-    return -1
-end

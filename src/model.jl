@@ -153,7 +153,7 @@ predict_v_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u 
 ##############################################################################
 
 function setdata(M::Model)
-    M.X, M.Y, hasconstfeature = getXY(M.S)
+    M.X, M.Y, M.hasconstfeature = getXY(M.S)
 end
 
 function setregweights(M::Model)
@@ -390,6 +390,10 @@ function setreg(M::Model, r)
     assignsolver(M, true)
 end
 function setsolver(M::Model, s)
+    if s == "default"
+        assignsolver(M, true)
+        return
+    end
     M.solver = s
 end
     
