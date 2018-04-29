@@ -18,10 +18,17 @@ mutable struct ProxGradientSolver <: Solver
     gammas
     fgs
 end
-ProxGradientSolver() = ProxGradientSolver(false, 1e-5, nothing, nothing, nothing)
-ProxGradientSolver(verbose, eps) = ProxGradientSolver(verbose, eps, nothing, nothing, nothing)
 
-CvxSolver() = CvxSolver(true, 1e-5)
+name(S::ProxGradientSolver) = "ProxGradientSolver"
+name(S::CvxSolver) = "CvxSolver"
+
+import Base.print
+print(io, S::Solver) = print(io, name(S))
+print(io::IO, S::Solver) = print(io, name(S))
+print(io::IO, S::Solver) = print(io, name(S))
+
+ProxGradientSolver(;verbose=true, eps=1e-12) = ProxGradientSolver(verbose, eps, nothing, nothing, nothing)
+CvxSolver(;verbose=true, eps=1e-5) = CvxSolver(verbose, eps)
 
 
 # we query for the solver when the user has
@@ -29,14 +36,14 @@ CvxSolver() = CvxSolver(true, 1e-5)
 # since we want to use one solver for the entire
 # regularization path
 getsolver(L::SquareLoss, R::L2Reg) = QRSolver()
-getsolver(L::SquareLoss, R::L1Reg) = CvxSolver()
-getsolver(L::SquareLoss, R::NonnegReg) = CvxSolver()
-getsolver(L::HuberLoss, R::L2Reg) = CvxSolver()
-getsolver(L::HuberLoss, R::L1Reg) = CvxSolver()
-getsolver(L::DeadzoneLoss, R::L2Reg) = CvxSolver()
-getsolver(L::AbsoluteLoss, R::L2Reg) = CvxSolver()
-getsolver(L::AbsoluteLoss, R::L1Reg) = CvxSolver()
-getsolver(L::TiltedLoss, R::L2Reg) = CvxSolver()
+getsolver(L::LossDiff, R) = ProxGradientSolver()
+getsolver(L::LossNonDiff, R) = CvxSolver()
+
+# non convex losses or regularizers
+getsolver(L::LogHuberLoss, R) = ProxGradientSolver()
+getsolver(L::LossDiff, R::SqrtReg) = ProxGradientSolver()
+
+
 
 ##############################################################################
 # CVX for huber
@@ -44,7 +51,6 @@ getsolver(L::TiltedLoss, R::L2Reg) = CvxSolver()
 function solve(S::CvxSolver, L, R, regweights, X, Y, lambda;
                   theta_guess=nothing)
     n,d = size(X)
-    println("n = ", n, " d = ", d)
     theta = Convex.Variable(d)
     # we shouldn't need to specify Positive here, but
     # Convex.jl is unreliable without it
@@ -128,7 +134,7 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
     #
     # so we minimize f + g
     f(theta) = loss(L, matrix(X*theta), Y)
-    g(theta) = reg(R, regparam*regweights, theta)
+    g(theta) = reg(R, regparam*regweights, theta[:])
     gradf(theta) = dloss(L, matrix(X*theta), Y)
     proxg(gamma, v) = prox(R, gamma, regparam*regweights, v)
     function dloss(L, Yhat, Y)

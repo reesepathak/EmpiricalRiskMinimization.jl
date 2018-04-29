@@ -31,11 +31,10 @@ end
 # L1 Regularizer
 #########################################
 struct L1Reg <: Regularizer end
-
 reg(R::L1Reg, a::Float64) = abs(a)
 cvxreg(R::L1Reg, a) = abs(a)
 
-# returns arg min ( R(x) + gamma*\norm(x-v) )
+# returns arg min ( R(x) + gamma*\norm(x-v)^2 )
 function prox(R::L1Reg, gamma::Float64, v::Float64)
     s = 0.5/gamma
     if v > s
@@ -57,15 +56,59 @@ prox(R::L2Reg, gamma::Float64, v::Float64) = v*gamma/(1+gamma)
 cvxreg(R::L2Reg, a) = a*a
 
 #########################################
-# L2 Regularizer
+# Sqrt Regularizer
 #########################################
 struct SqrtReg <: Regularizer end
+reg(R::SqrtReg, u::Float64) = sqrt(abs(u))
 
-reg(R::SqrtReg, u) = sqrt(abs(u))
+# horrific approach to computing prox
+function prox(R::SqrtReg, ga::Float64, vv::Float64)
+    if vv<0
+        return -prox(R, ga,-vv)
+    end
+    
+    ff(x) = sqrt(abs(x)) + ga*(x-vv)*(x-vv)
+    
+    g = complex(ga)
+    v = complex(vv)
+    # roots of  4 g x^3 - 4  g v  x  + 1 = 0
+    z1 = (2*g*v)/(3^(1/3)*(sqrt(3)*sqrt(27*g^4 - 64*g^6*v^3) - 9*g^2)^(1/3)) + (sqrt(3)*sqrt(27*g^4 - 64*g^6*v^3) - 9*g^2)^(1/3)/(2*3^(2/3)*g)
+    z2 = -((1 + im*sqrt(3))*g*v)/(3^(1/3)*(sqrt(3)*sqrt(27*g^4 - 64*g^6*v^3) - 9*g^2)^(1/3)) - ((1 - im*sqrt(3))*(sqrt(3)*sqrt(27*g^4 - 64*g^6*v^3) - 9*g^2)^(1/3))/(4*3^(2/3)*g)
+    z3 = -((1 - im*sqrt(3))*g*v)/(3^(1/3)*(sqrt(3)*sqrt(27*g^4 - 64*g^6*v^3) - 9*g^2)^(1/3)) - ((1 + im*sqrt(3))*(sqrt(3)*sqrt(27*g^4 - 64*g^6*v^3) - 9*g^2)^(1/3))/(4*3^(2/3)*g)
 
-function prox(R::SqrtReg, grad_step, t)
-    return 1
+    x1 = z1*z1
+    x2 = z2*z2
+    x3 = z3*z3
+    
+    xmin = 0.0
+    fmin = ff(xmin)
+    if abs(imag(x1)) < 1e-10
+        t = ff(real(x1))
+        if t < fmin
+            fmin = t
+            xmin = real(x1)
+        end
+    end
+    if abs(imag(x2)) < 1e-10
+        t = ff(real(x2))
+        if t < fmin
+            fmin = t
+            xmin = real(x2)
+        end
+    end
+    if abs(imag(x3)) < 1e-10
+        t = ff(real(x3))
+        if t < fmin
+            fmin = t
+            xmin = real(x3)
+        end
+    end
+    return xmin
 end
+
+
+
+    
 
 #########################################
 # Nonneg Regularizer
@@ -85,21 +128,3 @@ function prox(R::NonnegReg, gamma::Float64, v::Float64)
 end
 
 
-#########################################
-# Elastic net regularizer
-#########################################
-struct L1L2Reg <: Regularizer
-    L1_weight::Float64
-    L2_weight::Float64
-end
-
-reg(R::L1L2Reg, u) = R.L1_weight * norm(u, 1) + R.L2_weight * norm(u, 2)^2
-
-function prox(R::L1L2Reg, grad_step, t)
-    lambd1 = R.L1_weight*t
-    lambd2 = R.L2_weight*t
-    coeff = (1 + 2*lambd2)/lambd1
-    thresh = lambd1^2/(1 + 2lambd2)^2
-    u = (lambd1/(1 + 2lambd2)^2) * grad_step
-    return coeff*(sign.(u) .* max.(0, abs.(u) - thresh))
-end

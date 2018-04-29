@@ -225,7 +225,6 @@ end
 
 
 function SplitData(X, Y, trainfrac)
-    println("splitting data")
     trainrows, testrows = splitrows(size(X,1), trainfrac)
     Xtrain = X[trainrows,:]
     Ytrain = Y[trainrows,:]
@@ -250,7 +249,11 @@ end
 
 function splittraintestx(M, trainfrac)
     setdata(M)
+    if M.verbose
+        println("Model: splitting data")
+    end
     M.D = SplitData(M.X, M.Y, usetrainfrac(M, trainfrac))
+    
 end
 
 function usetrainfrac(M::Model, trainfrac)
@@ -289,6 +292,9 @@ end
 
 function trainx(M::Model, lambda, Xtrain, Xtest, Ytrain, Ytest; theta_guess = nothing)
     assignsolver(M)
+    if M.verbose
+        println("Model: calling solver: ", M.solver)
+    end
     theta = solve(M.solver, M.loss, M.regularizer, M.regweights, Xtrain, Ytrain, lambda;
                   theta_guess = theta_guess)
     trainloss = loss(M.loss, predict(M, Xtrain, theta), Ytrain)

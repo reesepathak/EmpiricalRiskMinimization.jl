@@ -1,11 +1,12 @@
 
 abstract type Loss end
 abstract type LossNonDiff <: Loss end
+abstract type LossDiff <: Loss end
 
 #########################################
 # Square Loss
 #########################################
-struct SquareLoss <: Loss end
+struct SquareLoss <: LossDiff end
 
 # assume  y and yhat are m-dimensional vectors (even if m=1)
 function loss(L::SquareLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
@@ -69,32 +70,11 @@ function cvxloss(L::TiltedLoss, yhat, y)
     return 0.5*abs(e) + (L.tau - 0.5)*e
 end
 
-#########################################
-# Hinge Loss
-#########################################
-struct HingeLoss <: LossNonDiff end
-
-loss(L::HingeLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(max.(1 - yhat.*y, 0))
-
-function derivloss(L::HingeLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
-    return -y.*(1.0*(yhat.*y .<= 1.0))
-end
-
-#########################################
-# Logistic Loss
-#########################################
-struct LogisticLoss <: Loss end
-
-loss(L::LogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(log.(1 + exp.(-yhat.*y)))
-
-function derivloss(L::LogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
-    return -(y./(1 + exp.(yhat.*y)))
-end
 
 #########################################
 # Huber Loss
 #########################################
-struct HuberLoss <: Loss
+struct HuberLoss <: LossDiff
     alpha::Float64
 end
 
@@ -126,30 +106,32 @@ end
 
 
 ##############################################################################
-# Nonconvex Huber
+# Log Huber
 
-struct NonconvexHuberLoss <: Loss
+struct LogHuberLoss <: LossDiff
     alpha::Float64
 end
 
-NonconvexHuberLoss() = NonconvexHuberLoss(1.0)
+LogHuberLoss() = LogHuberLoss(1.0)
 
-function loss(L::NonconvexHuberLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+function loss(L::LogHuberLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     if length(yhat)>1
         error("Huber loss applies only to scalars")
     end
-    u = yhat[1]-y[1]
-    if abs(u) < L.alpha
-        return u*u
+    e = yhat[1]-y[1]
+    if abs(e) < L.alpha
+        return e*e
     end
-    y = L.alpha*L.alpha*(1-2*log(L.alpha) + 2*log(abs(u)) )
+    y = L.alpha*L.alpha*(1-2*log(L.alpha) + 2*log(abs(e)) )
     return y
 end
 
 
-##############################################################################
+##############################
 #  Deadzone loss
-struct DeadzoneLoss <: Loss
+##############################
+
+struct DeadzoneLoss <: LossNonDiff
     alpha::Float64
 end
 
@@ -159,13 +141,35 @@ function loss(L::DeadzoneLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     if length(yhat)>1
         error("Deadzone loss applies only to scalars")
     end
-    u = yhat[1]-y[1]
-    return max(abs(u)-L.alpha, 0)
+    e = yhat[1]-y[1]
+    return max(abs(e)-L.alpha, 0)
 end
 
 function cvxloss(L::DeadzoneLoss,  yhat, y)
     e = yhat - y
     return max(abs(e)- L.alpha, 0)
+end
+
+#########################################
+# Hinge Loss TODO
+#########################################
+struct HingeLoss <: LossNonDiff end
+
+loss(L::HingeLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(max.(1 - yhat.*y, 0))
+
+function derivloss(L::HingeLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    return -y.*(1.0*(yhat.*y .<= 1.0))
+end
+
+#########################################
+# Logistic Loss TODO
+#########################################
+struct LogisticLoss <: Loss end
+
+loss(L::LogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(log.(1 + exp.(-yhat.*y)))
+
+function derivloss(L::LogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    return -(y./(1 + exp.(yhat.*y)))
 end
 
 
