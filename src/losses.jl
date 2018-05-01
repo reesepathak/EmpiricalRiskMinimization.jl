@@ -126,6 +126,15 @@ function loss(L::LogHuberLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return y
 end
 
+function derivloss(L::LogHuberLoss,  yhat::Array{Float64,1}, y::Array{Float64,1})
+    e = yhat[1] - y[1]
+    if abs(e) < L.alpha
+        return 2*e
+    end
+    return  2*L.alpha*L.alpha/e
+
+end
+
 
 ##############################
 #  Deadzone loss

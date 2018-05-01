@@ -14,9 +14,13 @@ end
 mutable struct ProxGradientSolver <: Solver
     verbose
     eps
+    max_iters
+    gamma_initial
     thetas
     gammas
-    fgs
+    gradfs
+    fs
+    gs
 end
 
 name(S::ProxGradientSolver) = "ProxGradientSolver"
@@ -27,7 +31,11 @@ print(io, S::Solver) = print(io, name(S))
 print(io::IO, S::Solver) = print(io, name(S))
 print(io::IO, S::Solver) = print(io, name(S))
 
-ProxGradientSolver(;verbose=true, eps=1e-12) = ProxGradientSolver(verbose, eps, nothing, nothing, nothing)
+ProxGradientSolver(;verbose=true, eps=1e-12, maxiters=1000,
+                   gamma_initial=0.1) = ProxGradientSolver(verbose, eps, maxiters,
+                                                           gamma_initial, nothing, nothing,
+                                                           nothing, nothing, nothing)
+
 CvxSolver(;verbose=true, eps=1e-5) = CvxSolver(verbose, eps)
 
 
@@ -115,16 +123,13 @@ end
 # minimize (1/n) * sum loss(theta^T*x^i, y^i) + lambda*\sum_i regweights[i]*reg(theta_i)
 #
 
+
 function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
                regweights, X, Y, regparam; theta_guess = nothing)
 
     # assume Y is n by 1
 
-    # params
-    max_iters = 1000
-    gamma_initial = 0.1
-
-
+   
     d = size(X,2)
     n = size(X,1)
    
@@ -134,9 +139,16 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
     #
     # so we minimize f + g
     f(theta) = loss(L, matrix(X*theta), Y)
-    g(theta) = reg(R, regparam*regweights, theta[:])
     gradf(theta) = dloss(L, matrix(X*theta), Y)
+    g(theta) = reg(R, regparam*regweights, theta[:])
     proxg(gamma, v) = prox(R, gamma, regparam*regweights, v)
+
+    #if regparam == 0
+    #    println("Zero regularization: using gradient instead of prox-gradient");
+    #    g(theta) = 0.0
+    #    proxg(gamma, v) = v
+    #end
+    
     function dloss(L, Yhat, Y)
         dtheta = zeros(d)
         for i=1:n
@@ -146,10 +158,24 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
         return dtheta
     end
 
+    theta =  proxgradient(d, f, gradf, g, proxg, S; theta_guess = theta_guess)
+    return matrix(theta)
+end
+
+
+function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
+
+    max_iters = S.max_iters
+    verbose = S.verbose
+    eps = S.eps
+    gamma_initial = S.gamma_initial
+    
     # buffers
     thetas = zeros(d, max_iters)
     gammas = zeros(max_iters)
-    fgs = zeros(max_iters)
+    gradfs = zeros(d, max_iters)
+    fs = zeros(max_iters)
+    gs = zeros(max_iters)
 
     # initial conditions
     if theta_guess != nothing
@@ -161,33 +187,41 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
     # store first step
     thetas[:,1] = theta_initial
     gammas[1] = gamma_initial
-    fgs[1] = f(theta_initial) + g(theta_initial)
-
+    fs[1] = f(theta_initial)
+    gs[1] = g(theta_initial)
+    gradfs[:,1] = gradf(theta_initial)
+        
     # make inner loop variables accessible
     gamma_next = 0.0
     theta_next = zeros(d)
-    fg_next = 0.0
+    f_next = 0.0
+    g_next = 0.0
+    gradf_next = zeros(d)
     k=1
     
     # loop
     for k=1:max_iters-1
         gamma = gammas[k]
         theta = thetas[:,k]
-        fg = fgs[k]
+        fg = fs[k] + gs[k]
+        
 
         # printing
-        if S.verbose
+        if verbose
             @printf("%d   gamma: %f   loss: %f   reg: %f \n", k, gamma, f(theta), g(theta))
         end
 
+        gradfs[:,k] = gradf(theta)
+        
         # line search
         while true
-            v = theta - gradf(theta)/(2*gamma)
+            v = theta - gradfs[:,k]/(2*gamma)
             theta_next = proxg(gamma, v)
-            fg_next = f(theta_next) + g(theta_next)
-            # should be <= not < else can get stuck if
-            # g is an indicator function
-            if fg_next <= fg
+            f_next = f(theta_next) 
+            g_next = g(theta_next)
+            
+            # should be <= not < else can get stuck if g is an indicator function
+            if f_next + g_next <= fg
                 # increase the step size and move to next step
                 gamma_next = gamma/1.2
                 break
@@ -199,17 +233,20 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
         # save the variables
         thetas[:,k+1] = theta_next
         gammas[k+1] = gamma_next
-        fgs[k+1] = fg_next
+        fs[k+1] = f_next
+        gs[k+1] = g_next
         
         # stopping criterion
-        if fg - fg_next < S.eps
+        if fg - (f_next + g_next) < eps
             break
         end
+
     end
     S.thetas = thetas[:,1:k+1]
     S.gammas = gammas[1:k+1]
-    S.fgs = fgs[1:k+1]
-    return matrix(thetas[:,k+1])
+    S.gradfs = gradfs[:,1:k+1]
+    S.fs = fs[1:k+1]
+    S.gs = gs[1:k+1]
+    return thetas[:, k+1]
+    
 end
-
-
