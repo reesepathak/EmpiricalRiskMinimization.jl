@@ -25,6 +25,7 @@ end
 
 name(S::ProxGradientSolver) = "ProxGradientSolver"
 name(S::CvxSolver) = "CvxSolver"
+name(S::QRSolver) = "QRSolver"
 
 import Base.print
 print(io, S::Solver) = print(io, name(S))
@@ -155,7 +156,7 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
             s = derivloss(L, Yhat[i,:], Y[i,:])[1]
             dtheta += s*X[i,:]
         end
-        return dtheta
+        return dtheta/n
     end
 
     theta =  proxgradient(d, f, gradf, g, proxg, S; theta_guess = theta_guess)
