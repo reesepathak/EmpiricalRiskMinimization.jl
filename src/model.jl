@@ -90,8 +90,15 @@ function getfoldrows(n, nfolds)
     return foldrows, nonfoldrows
 end
 
-    
-function splitrows(n, trainfrac; splitmethod=0)
+function splitrows(n, trainfrac::Array{Int64,1})
+    trainrows = trainfrac
+    allrows = Set(1:n)
+    trainset = Set(copy(trainrows))
+    testrows = sort(collect(setdiff(allrows, trainset)))
+    return trainrows, testrows
+end
+
+function splitrows(n, trainfrac::Number; splitmethod=0)
     if splitmethod == 0
         ntrain = convert(Int64, round(trainfrac*n))
         p = randperm(n)
@@ -233,6 +240,9 @@ function SplitData(X, Y, trainfrac)
     return SplitData(Xtrain, Ytrain, Xtest, Ytest, trainrows, testrows, trainfrac, NoResults())
 end
 
+
+
+
 function FoldedData(X, Y, nfolds)
     foldrows, nonfoldrows = getfoldrows(size(X,1), nfolds)
     return FoldedData(X, Y, nfolds, foldrows, nonfoldrows, NoResults())
@@ -284,6 +294,7 @@ function splitfolds(M::Model, nfolds, resplit)
     end
     setregweights(M)
 end
+
 
 
 
