@@ -64,11 +64,11 @@ mutable struct Model
     S::DataSource
     X
     Y
-    hasconstfeature
     featurelist                  # a list of the columns of X that are of interest
     regweights
     istrained::Bool
     verbose::Bool
+    xydataisinvalid::Bool
 end
 
 ##############################################################################
@@ -160,27 +160,26 @@ predict_v_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u 
 ##############################################################################
 
 function setdata(M::Model)
-    M.X, M.Y, M.hasconstfeature = getXY(M.S)
+    M.X, M.Y  = getXY(M.S)
+    M.xydataisinvalid = false
+    setregweights(M)
 end
 
 function setregweights(M::Model)
-    if M.featurelist != nothing
-        nf = length(M.featurelist)
-    elseif isa(M.D, SplitData)
-        nf = size(M.D.Xtrain,2)
-    elseif isa(M.D, FoldedData)
-        nf = size(M.D.X, 2)
-    else
+    if M.xydataisinvalid
         return
     end
+    
+    X = selectfeatures(M, M.X)
+    nf = size(X,2)
     M.regweights = ones(nf)
-    if M.hasconstfeature
-        M.regweights[1] = 0
+    for i=1:nf
+        if var(X[:,i]) == 0
+            M.regweights[i] = 0
+        end
     end
-
-        
-
 end
+
 
 function defaultembedding(M::Model; stand=true)
     addfeatureV(M, 1, stand=stand)
@@ -193,8 +192,13 @@ end
 
 function Model(S::DataSource, loss, reg, verbose)
     M =  Model(NoData(), loss, reg, DefaultSolver(), S,
-               nothing, nothing, false,
-               nothing, nothing, false, verbose)
+               nothing, nothing, #X,Y
+               "all", # featurelist
+               nothing, #regweights
+               false, #istrained
+               verbose, #verbose
+               true #xydataisinvalid
+               )
     setdata(M)
     return M
 end
@@ -207,6 +211,9 @@ function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
     S = makeFrameSource(U, V, Unames, Vnames)
     M = Model(S, loss, reg, verbose)
     if embedall
+        if M.verbose
+            println("Model: applying default embedding")
+        end
         defaultembedding(M; kwargs...)
     end
     return M
@@ -237,12 +244,6 @@ end
 
 ##############################################################################
 
-function hasdata(M::Model)
-    if isa(M.D, SplitData) || isa(M.D, FoldedData)
-        return true
-    end
-    return false
-end
 
 function splittraintestx(M, trainfrac)
     setdata(M)
@@ -264,22 +265,33 @@ function usetrainfrac(M::Model, trainfrac)
 end
         
 function splittraintest(M::Model; trainfrac=nothing, resplit=false, force=false)
-    if !isa(M.D, SplitData)
-        splittraintestx(M, trainfrac)
-    elseif trainfrac != nothing && trainfrac != M.D.trainfrac
-        splittraintestx(M, trainfrac)
-    elseif force || M.X == nothing || resplit
+    if resplit || force
+        M.xydataisinvalid = true
+    end
+    if !M.xydataisinvalid && isa(M.D, SplitData)
+        if trainfrac != nothing && trainfrac != M.D.trainfrac
+            M.xydataisinvalid = true
+        end
+    end
+    if M.xydataisinvalid ||  !isa(M.D, SplitData)
         splittraintestx(M, trainfrac)
     end
-    setregweights(M)
 end
 
-function splitfolds(M::Model, nfolds, resplit)
-    if M.X == nothing || resplit || !isa(M.D, FoldedData) || M.D.nfolds != nfolds
+function splitfolds(M::Model, nfolds; resplit=false, force=false)
+    if resplit || force 
+        M.xydataisinvalid = true
+    end
+    if !M.xydataisinvalid && isa(M.D, FoldedData)
+        if M.D.nfolds != nfolds
+            M.xydataisinvalid = true
+        end
+    end
+
+    if M.xydataisinvalid || !isa(M.D, FoldedData)
         setdata(M)
         M.D = FoldedData(M.X, M.Y, nfolds)
     end
-    setregweights(M)
 end
 
 
@@ -292,6 +304,11 @@ function trainx(M::Model, lambda, Xtrain, Xtest, Ytrain, Ytest; theta_guess = no
     assignsolver(M)
     if M.verbose
         println("Model: calling solver: ", M.solver)
+        for i=1:length(M.regweights)
+            if M.regweights[i] == 0
+                println("Model: Not regularizing constant feature X[:,$(i)]")
+            end
+        end
     end
     theta = solve(M.solver, M.loss, M.regularizer, M.regweights, Xtrain, Ytrain, lambda;
                   theta_guess = theta_guess)
@@ -328,32 +345,44 @@ end
 
 
 function trainfolds(M::Model; lambda=1e-10, nfolds=5,
-                    resplit=false, features=nothing, quiet=true, kwargs...)
+                    resplit=false, features=nothing, kwargs...)
     splitfolds(M, nfolds, resplit)
-    setfeaturesifasked(M, features)
+    if features != nothing
+        setfeatures(M, features)
+    end
     M.D.results = trainfoldsx(M, lambda, nfolds)
     M.istrained = true
-    statusifasked(M, quiet)
+    if M.verbose
+        status(M)
+    end
 end
 
 
 function trainpath(M::Model; lambda=logspace(-5,5,100), trainfrac=0.8,
-                   resplit=false, features=nothing, quiet=true, kwargs...)
+                   resplit=false, features=nothing, kwargs...)
     splittraintest(M; trainfrac=trainfrac, resplit=resplit)
-    setfeaturesifasked(M, features)
+    if features != nothing
+        setfeatures(M, features)
+    end
     M.D.results = trainpathx(M, lambda)
     M.istrained = true
-    statusifasked(M, quiet)
+    if M.verbose
+        status(M)
+    end
 end
 
 
 function train(M::Model; lambda=1e-10, trainfrac=nothing,
-               resplit=false, features=nothing, quiet=true, kwargs...)
+               resplit=false, features=nothing, kwargs...)
     splittraintest(M; trainfrac=trainfrac, resplit=resplit)
-    setfeaturesifasked(M, features)
+    if features != nothing
+        setfeatures(M, features)
+    end
     M.D.results = trainx(M, lambda, Xtrain(M), Xtest(M), Ytrain(M), Ytest(M))
     M.istrained = true
-    statusifasked(M, quiet)
+    if M.verbose
+        status(M)
+    end
 end
 
 ##############################################################################
@@ -364,25 +393,10 @@ function assignsolver(M::Model, force=false)
     end
 end
 
-function setfeaturesx(M::Model, f)
-    if f == "all"
-        M.featurelist = nothing
-    else
-        M.featurelist = f
-    end
-end
 
 function setfeatures(M::Model, f)
-    setfeaturesx(M, f)
+    M.featurelist = f
     setregweights(M)
-end
-
-
-
-function setfeaturesifasked(M::Model, features)
-    if features != nothing
-        setfeatures(M, features)
-    end
 end
 
 function setloss(M::Model, l)
@@ -406,7 +420,10 @@ end
 ##############################################################################
 # querying
 function selectfeatures(M::Model, X)
-    if M.featurelist == nothing
+    if M.featurelist == "all" 
+        return X
+    end
+    if size(X,2) ==0
         return X
     end
     return X[:,M.featurelist]
@@ -501,10 +518,37 @@ thetapath(M::Model) = thetapath(M.D.results)
 
 ##############################################################################
 
-addfeatureU(M::Model; kwargs...) = addfeatureU(M.S, nothing; kwargs...)
-addfeatureV(M::Model; kwargs...) = addfeatureV(M.S, nothing; kwargs...)
-addfeatureU(M::Model, col; kwargs...) = addfeatureU(M.S, col; kwargs...)
-addfeatureV(M::Model, col; kwargs...) = addfeatureV(M.S, col; kwargs...)
+function addfeatureU(M::Model; rebuild=true, kwargs...)
+    M.xydataisinvalid = true
+    addfeatureU(M.S, nothing; kwargs...)
+    if rebuild
+        setdata(M)
+    end
+end
+
+function addfeatureV(M::Model; rebuild=true, kwargs...)
+    M.xydataisinvalid = true
+    addfeatureV(M.S, nothing; kwargs...)
+    if rebuild
+        setdata(M)
+    end
+end
+
+function addfeatureU(M::Model, col; rebuild=true, kwargs...)
+    M.xydataisinvalid = true
+    addfeatureU(M.S, col; kwargs...)
+    if rebuild
+        setdata(M)
+    end
+end
+
+function addfeatureV(M::Model, col; rebuild=true, kwargs...)
+    M.xydataisinvalid = true
+    addfeatureV(M.S, col; kwargs...)
+    if rebuild
+        setdata(M)
+    end
+end
 
 
 
@@ -527,18 +571,12 @@ end
 """
 Prints and returns the status of the model.
 """
-function status(io::IO, M::Model; quiet=true)
+function status(io::IO, M::Model)
     status(io, M.D.results)
     println(io, "  training samples: ", length(Ytrain(M)))
     println(io, "  test samples: ", length(Ytest(M)))
+    println(io, "  columns in X: ", size(M.X,2))
     println(io, "----------------------------------------")
 end
 
 status(M::Model; kwargs...)  = status(STDOUT, M; kwargs...)
-
-function statusifasked(M, quiet)
-    if !quiet
-        status(M)
-    end
-end
-

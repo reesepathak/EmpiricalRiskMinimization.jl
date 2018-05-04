@@ -187,7 +187,7 @@ end
 
 function loss(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2})
     l = 0
-    n = length(Yhat)
+    n = size(Yhat,1)
     for i=1:n
         l += loss(L, Yhat[i,:], Y[i,:])
     end

@@ -69,15 +69,6 @@ end
 
 
 
-function containsone(fmaps)
-    for a in fmaps
-        if isa(a, OneFmap)
-            return true
-        end
-    end
-    return false
-end
-
 function getXY(F::FrameSource)
     Xf = applyfmaplist(F.Xmaps, F.Uf)
     Yf = applyfmaplist(F.Ymaps, F.Vf)
@@ -85,8 +76,7 @@ function getXY(F::FrameSource)
     Y = Yf.A
     F.Xnames = Xf.names
     F.Ynames = Yf.names
-    hasconstfeature = containsone(F.Xmaps)
-    return X, Y, hasconstfeature
+    return X, Y
 end
 
 

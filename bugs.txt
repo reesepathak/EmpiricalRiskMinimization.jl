@@ -1,0 +1,3 @@
+
+- cannot add features after training
+- constant feature must be added first else regweights are wrong

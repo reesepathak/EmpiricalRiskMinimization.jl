@@ -32,12 +32,12 @@ print(io, S::Solver) = print(io, name(S))
 print(io::IO, S::Solver) = print(io, name(S))
 
 
-ProxGradientSolver(;verbose=true, eps=1e-12, maxiters=1000,
+ProxGradientSolver(;verbose=false, eps=1e-12, maxiters=1000,
                    gamma_initial=0.1) = ProxGradientSolver(verbose, eps, maxiters,
                                                            gamma_initial, nothing, nothing,
                                                            nothing, nothing, nothing)
 
-CvxSolver(;verbose=true, eps=1e-5) = CvxSolver(verbose, eps)
+CvxSolver(;verbose=false, eps=1e-5) = CvxSolver(verbose, eps)
 
 
 # we query for the solver when the user has
