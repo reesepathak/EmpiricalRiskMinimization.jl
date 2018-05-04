@@ -53,17 +53,21 @@ function FrameSource(Uf::DFrame, Vf::DFrame)
 end
 
 function makeFrameSource(U, V, Unames, Vnames)
-    Uf = DFrame(matrix(U), Unames)
-    Vf = DFrame(matrix(V), Vnames)
+    if Unames != nothing
+        Uf = DFrame(matrix(U), Unames)
+    else
+        Uf = DFrame(matrix(U))
+    end
+    if Vnames != nothing
+        Vf = DFrame(matrix(V), Vnames)
+    else
+        Vf = DFrame(matrix(V))
+    end
     return FrameSource(Uf, Vf)
 end
 
 
-function makeFrameSource(U, V)
-    Uf = DFrame(matrix(U))
-    Vf = DFrame(matrix(V))
-    return FrameSource(Uf, Vf)
-end
+
 
 function containsone(fmaps)
     for a in fmaps

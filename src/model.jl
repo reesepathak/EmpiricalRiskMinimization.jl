@@ -182,20 +182,6 @@ function setregweights(M::Model)
 
 end
 
-function Model(S::DataSource, loss, reg, verbose)
-    M =  Model(NoData(), loss, reg, DefaultSolver(), S,
-               nothing, nothing, false,
-               nothing, nothing, false, verbose)
-    setdata(M)
-    return M
-end
-
-# old style embeddings
-# function Model(U, V, loss, reg; Xembed = false, Yembed = false)
-#     S = SimpleSource(U, V, Xembed, Yembed)
-#     return Model(S, loss, reg)
-# end
-
 function defaultembedding(M::Model; stand=true)
     addfeatureV(M, 1, stand=stand)
     addfeatureU(M, etype="one")
@@ -205,7 +191,19 @@ function defaultembedding(M::Model; stand=true)
     end
 end
 
-function Model(U, V, Unames, Vnames, loss, reg; embedall = false, verbose=false, kwargs...)
+function Model(S::DataSource, loss, reg, verbose)
+    M =  Model(NoData(), loss, reg, DefaultSolver(), S,
+               nothing, nothing, false,
+               nothing, nothing, false, verbose)
+    setdata(M)
+    return M
+end
+
+##############################################################################
+
+function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
+               Unames = nothing, Vnames = nothing,
+               embedall = false, verbose=false, kwargs...)
     S = makeFrameSource(U, V, Unames, Vnames)
     M = Model(S, loss, reg, verbose)
     if embedall
@@ -215,20 +213,9 @@ function Model(U, V, Unames, Vnames, loss, reg; embedall = false, verbose=false,
 end
 
 
-function Model(U, V; loss=SquareLoss(), reg=L2Reg(), embedall = false, verbose=false, kwargs...)
-    S = makeFrameSource(U, V)
-    M = Model(S, loss, reg, verbose)
-    if embedall
-        defaultembedding(M; kwargs...)
-    end
-    return M
-end
 
 
-function Model(U, V, loss, reg; kwargs...)
-    return Model(U, V; loss=loss, reg=reg, kwargs...)
-end
-
+##############################################################################
 
 
 function SplitData(X, Y, trainfrac)
