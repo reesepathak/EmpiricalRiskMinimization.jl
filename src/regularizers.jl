@@ -5,7 +5,9 @@ abstract type Regularizer end
 function reg(R::Regularizer, regweights::Array{Float64,1}, theta::Array{Float64,1})
     s = 0.0
     for i=1:length(theta)
-        s += regweights[i]*reg(R, theta[i])
+        if regweights[i] > 0 # test otherwise 0*Inf = NaN. We would want 0
+            s += regweights[i]*reg(R, theta[i])
+        end
     end
     return s
 end

@@ -144,11 +144,6 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
     g(theta) = reg(R, regparam*regweights, theta[:])
     proxg(gamma, v) = prox(R, gamma, regparam*regweights, v)
 
-    #if regparam == 0
-    #    println("Zero regularization: using gradient instead of prox-gradient");
-    #    g(theta) = 0.0
-    #    proxg(gamma, v) = v
-    #end
     
     function dloss(L, Yhat, Y)
         dtheta = zeros(d)
@@ -220,7 +215,7 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
             theta_next = proxg(gamma, v)
             f_next = f(theta_next) 
             g_next = g(theta_next)
-            
+
             # should be <= not < else can get stuck if g is an indicator function
             if f_next + g_next <= fg
                 # increase the step size and move to next step

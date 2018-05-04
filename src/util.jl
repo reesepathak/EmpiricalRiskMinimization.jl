@@ -4,8 +4,8 @@ sigm(u) = 1/(1 + exp(-u))
 
 
 "Convert an n-vector to an nx1 array"
-matrix(x::Array{T,1}) where {T<:Number} = reshape(x, length(x),1)
-matrix(x::Array{T,2}) where {T<:Number} = x
+matrix(x::Array{T,1}) where {T<:Any} = reshape(x, length(x),1)
+matrix(x::Array{T,2}) where {T<:Any} = x
 matrix(x::Range) = reshape(collect(x), length(x), 1)
 matrix(X::Array{Any,2}) = X
 matrix(x::RowVector) = reshape(transpose(x), 1, length(x))

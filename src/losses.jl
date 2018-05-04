@@ -171,9 +171,9 @@ function derivloss(L::HingeLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
 end
 
 #########################################
-# Logistic Loss TODO
+# Logistic Loss 
 #########################################
-struct LogisticLoss <: Loss end
+struct LogisticLoss <: LossDiff end
 
 loss(L::LogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(log.(1 + exp.(-yhat.*y)))
 
