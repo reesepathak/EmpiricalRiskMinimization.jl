@@ -158,7 +158,8 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
     return matrix(theta)
 end
 
-
+# generic solver will work for any f and g
+# gets parameters from S and stores results in S
 function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
 
     max_iters = S.max_iters
