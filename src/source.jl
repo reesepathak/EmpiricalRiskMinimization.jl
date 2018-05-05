@@ -85,13 +85,13 @@ getU(F::FrameSource) = F.Uf.A
 getV(F::FrameSource) = F.Vf.A
 
 # embed one data record
-function embedU(F::FrameSource, u::Array{Float64,1})
+function embedU(F::FrameSource, u::Array{T,1}) where {T<:Any}
     U = reshape(u, 1, length(u))
     embedU(F, U)
 end
 
 
-function embedU(F::FrameSource, U::Array{Float64,2})
+function embedU(F::FrameSource, U::Array{T,2}) where {T<:Any}
     Uf = DFrame(U, F.Uf.names)
     Xf = applyfmaplist(F.Xmaps, Uf)
     return Xf.A

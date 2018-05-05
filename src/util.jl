@@ -11,11 +11,11 @@ matrix(X::Array{Any,2}) = X
 matrix(x::RowVector) = reshape(transpose(x), 1, length(x))
 
 "Apply f to each row of a matrix. f should map vectors to vectors"
-function rowwise(f, X::Array{Float64,2})
+function rowwise(f, X::Array{T,2}) where {T<:Any} 
     y1 = f(X[1,:])
     n = size(X,1)
     d = length(y1)
-    Y = Array{Float64}(n,d)
+    Y = Array{Any}(n,d)
     Y[1,:] = y1
     for i=2:n
         Y[i,:] = f(X[i,:])

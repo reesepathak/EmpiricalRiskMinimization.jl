@@ -1,4 +1,4 @@
 
 - cannot add features after training
   need M to have "Dinvalid" flag
-- FIXED constant feature must be added first else regweights are wrong
+- constant feature must be added first else regweights are wrong

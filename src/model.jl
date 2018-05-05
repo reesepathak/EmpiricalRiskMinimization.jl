@@ -69,6 +69,7 @@ mutable struct Model
     istrained::Bool
     verbose::Bool
     xydataisinvalid::Bool
+    disinvalid::Bool
 end
 
 ##############################################################################
@@ -146,11 +147,11 @@ predict_y_from_train(M::Model,                  theta=thetaopt(M))   = predict(M
 predict_v_from_test(M::Model,                   theta=thetaopt(M))   = unembedY(M.S, predict(M, Xtest(M), theta))
 predict_v_from_train(M::Model,                  theta=thetaopt(M))   = unembedY(M.S, predict(M, Xtrain(M), theta))
 
-predict_y_from_u(M::Model, u::Array{Float64,1}, theta=thetaopt(M)) =  predict(M::Model, embedU(M.S, u), theta)
-predict_y_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u -> predict_y_from_u(M, u, theta), U)
+predict_y_from_u(M::Model, u::Array{T,1}, theta=thetaopt(M)) where {T<:Any} =  predict(M::Model, embedU(M.S, u), theta)
+predict_y_from_u(M::Model, U::Array{T,2}, theta=thetaopt(M)) where {T<:Any} =  rowwise(u -> predict_y_from_u(M, u, theta), U)
 
-predict_v_from_u(M::Model, u::Array{Float64,1}, theta=thetaopt(M)) =  unembedY(M.S, predict_y_from_u(M, u, theta))
-predict_v_from_u(M::Model, U::Array{Float64,2}, theta=thetaopt(M)) =  rowwise(u -> predict_v_from_u(M, u, theta), U)
+predict_v_from_u(M::Model, u::Array{T,1}, theta=thetaopt(M)) where {T<:Any} =  unembedY(M.S, predict_y_from_u(M, u, theta))
+predict_v_from_u(M::Model, U::Array{T,2}, theta=thetaopt(M)) where {T<:Any} =  rowwise(u -> predict_v_from_u(M, u, theta), U)
 
 
 
@@ -169,7 +170,6 @@ function setregweights(M::Model)
     if M.xydataisinvalid
         return
     end
-    
     X = selectfeatures(M, M.X)
     nf = size(X,2)
     M.regweights = ones(nf)
@@ -197,7 +197,8 @@ function Model(S::DataSource, loss, reg, verbose)
                nothing, #regweights
                false, #istrained
                verbose, #verbose
-               true #xydataisinvalid
+               true, # xydataisinvalid
+               true  # disinvalid 
                )
     setdata(M)
     return M
@@ -251,7 +252,7 @@ function splittraintestx(M, trainfrac)
         println("Model: splitting data")
     end
     M.D = SplitData(M.X, M.Y, usetrainfrac(M, trainfrac))
-    
+    M.disinvalid = false
 end
 
 function usetrainfrac(M::Model, trainfrac)
@@ -266,31 +267,32 @@ end
         
 function splittraintest(M::Model; trainfrac=nothing, resplit=false, force=false)
     if resplit || force
-        M.xydataisinvalid = true
+        M.disinvalid = true
     end
-    if !M.xydataisinvalid && isa(M.D, SplitData)
+    if !M.disinvalid && isa(M.D, SplitData)
         if trainfrac != nothing && trainfrac != M.D.trainfrac
-            M.xydataisinvalid = true
+            M.disinvalid = true
         end
     end
-    if M.xydataisinvalid ||  !isa(M.D, SplitData)
+    if M.disinvalid ||  !isa(M.D, SplitData)
         splittraintestx(M, trainfrac)
     end
 end
 
 function splitfolds(M::Model, nfolds; resplit=false, force=false)
     if resplit || force 
-        M.xydataisinvalid = true
+        M.disinvalid = true
     end
-    if !M.xydataisinvalid && isa(M.D, FoldedData)
+    if !M.disinvalid && isa(M.D, FoldedData)
         if M.D.nfolds != nfolds
-            M.xydataisinvalid = true
+            M.disinvalid = true
         end
     end
 
-    if M.xydataisinvalid || !isa(M.D, FoldedData)
+    if M.disinvalid || !isa(M.D, FoldedData)
         setdata(M)
         M.D = FoldedData(M.X, M.Y, nfolds)
+        M.disinvalid = false
     end
 end
 
@@ -520,6 +522,8 @@ thetapath(M::Model) = thetapath(M.D.results)
 
 function addfeatureU(M::Model; rebuild=true, kwargs...)
     M.xydataisinvalid = true
+    M.disinvalid = true
+    setfeatures(M, "all")
     addfeatureU(M.S, nothing; kwargs...)
     if rebuild
         setdata(M)
@@ -528,6 +532,8 @@ end
 
 function addfeatureV(M::Model; rebuild=true, kwargs...)
     M.xydataisinvalid = true
+    M.disinvalid = true
+    setfeatures(M, "all")
     addfeatureV(M.S, nothing; kwargs...)
     if rebuild
         setdata(M)
@@ -536,6 +542,8 @@ end
 
 function addfeatureU(M::Model, col; rebuild=true, kwargs...)
     M.xydataisinvalid = true
+    M.disinvalid = true
+    setfeatures(M, "all")
     addfeatureU(M.S, col; kwargs...)
     if rebuild
         setdata(M)
@@ -544,6 +552,8 @@ end
 
 function addfeatureV(M::Model, col; rebuild=true, kwargs...)
     M.xydataisinvalid = true
+    M.disinvalid = true
+    setfeatures(M, "all")
     addfeatureV(M.S, col; kwargs...)
     if rebuild
         setdata(M)
