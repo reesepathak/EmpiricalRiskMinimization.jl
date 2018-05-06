@@ -1,3 +1,5 @@
 Compat
 julia 0.6
 Convex
+SCS
+ECOS
