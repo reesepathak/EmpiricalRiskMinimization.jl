@@ -573,9 +573,6 @@ function status(io::IO, R::PointResults)
     println(io, "  test loss: ", testloss(R))
 end
 
-"""
-Prints and returns the status of the model.
-"""
 function status(io::IO, M::Model)
     status(io, M.D.results)
     println(io, "  training samples: ", length(Ytrain(M)))
@@ -584,4 +581,9 @@ function status(io::IO, M::Model)
     println(io, "----------------------------------------")
 end
 
+"""`status(M)`
+Prints and returns the status of the ERM model, `M`. Will only 
+print the most recent action (e.g., training, regularization path, etc.) 
+performed on the model. 
+"""
 status(M::Model; kwargs...)  = status(STDOUT, M; kwargs...)
