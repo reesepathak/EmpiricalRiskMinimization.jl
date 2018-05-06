@@ -88,4 +88,28 @@ var documenterSearchIndex = {"docs": [
     "text": "CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nOrder = [:type, :function]\nPages = [\"losses.jl\"]"
 },
 
+{
+    "location": "lib/modeling.html#",
+    "page": "Models and Training",
+    "title": "Models and Training",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "lib/modeling.html#EmpiricalRiskMinimization.status-Tuple{EmpiricalRiskMinimization.Model}",
+    "page": "Models and Training",
+    "title": "EmpiricalRiskMinimization.status",
+    "category": "method",
+    "text": "status(M) Prints and returns the status of the ERM model, M. Will only  print the most recent action (e.g., training, regularization path, etc.)  performed on the model. \n\n\n\n"
+},
+
+{
+    "location": "lib/modeling.html#Models-and-Training-1",
+    "page": "Models and Training",
+    "title": "Models and Training",
+    "category": "section",
+    "text": "CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nOrder = [:type, :function]\nPages = [\"model.jl\"]"
+},
+
 ]}
