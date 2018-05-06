@@ -2,8 +2,8 @@
 *.jl.*.cov
 *.jl.mem
 *~
-docs/build/* 
-docs/site/*
+docs/build/
+docs/site/
 
 .vscode
 .DS_Store
