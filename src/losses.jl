@@ -5,6 +5,11 @@ abstract type LossDiff <: Loss end
 #########################################
 # Square Loss
 #########################################
+"""
+    SquareLoss()
+
+Constructs the squared loss or l2 loss.
+"""
 struct SquareLoss <: LossDiff end
 
 # assume  y and yhat are m-dimensional vectors (even if m=1)

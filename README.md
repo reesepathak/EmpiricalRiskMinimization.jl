@@ -8,36 +8,16 @@
 
 
 ## Installation
-Currently this package is only available via GitHub (though it soon will be submitted to
-  the Pkg repository). Users add the package via:
+Currently this package should be used via cloning from GitHub. Users add the package via:
 ```Julia
 Pkg.clone("https://github.com/reesepathak/EmpiricalRiskMinimization.jl.git")
 ```
+In particular, do not use `Pkg.add()` or any of the standard installation functions.
+You should also invoke `Pkg.update()` frequently to ensure you receive our most recent updates.
+
 ## Documentation 
-We are working on providing more complete documentation. In the meantime, refer to the usage examples below and in the repository. 
+We are working on providing more complete documentation. In the meantime, refer to the
+following draft of our [documentation.](https://reesepathak.github.io/EmpiricalRiskMinimization.jl/stable)
+We encourage you to open an issue on GitHub if you encounter issues or if some functionality in the package is unstable or has
+unclear usage. 
 
-Find the most recent documentation [here](https://reesepathak.github.io/EmpiricalRiskMinimization.jl/stable)
-
-## Example usage
-The following example demonstrates regularized logistic regression with
-`EmpiricalRiskMinimization.jl`. 
-
-```Julia
-using EmpiricalRiskMinimization
-
-# data
-n = 2000; d = 350;
-X = randn(n, d); y = (sign.(randn(n) - 0.5) + 1)/2;
-
-# model
-model = Model(LogisticLoss(), L2Reg(0.1), fit_intercept=true);
-fit!(model, X, y)
-status(model)
-final_risk(model)
-weights = parameters(model)
-
-# predictions
-y_tild = sigm.(X*weights[1:d] + weights[d + 1])
-y_pred = 1.0 * (y_tild .>= 0.5)
-acc = sum(1.0*(y_pred .== y))/n
-```

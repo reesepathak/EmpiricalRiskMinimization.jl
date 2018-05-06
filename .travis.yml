@@ -5,8 +5,8 @@ os:
   - osx
 julia:
   - 0.6
-  - nightly
-  - release
+  # - nightly
+  # - release
 notifications:
   email: false
 matrix:
