@@ -33,4 +33,4 @@ Although the package has been submitted to the official Julia repository, if you
 recent version of the code. The code is very volatile right now, so it is essential that users
 `Pkg.update()` prior to using the code.
 
-Then head over to [usage/introduction the first examples page] to begin using ERM.jl!
+Then head over to [our ERM walkthrough](examples/walkthrough.html) to begin using ERM.jl.

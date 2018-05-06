@@ -7,10 +7,9 @@ makedocs(modules=[EmpiricalRiskMinimization],
          authors="Reese Pathak, Guillermo Angeris, Sanjay Lall, Stephen Boyd.",
          pages=Any[
              "Home" => "index.md",
-             "Basic Usage" => Any["usage/introduction.md", "usage/installation.md"],
-             "Examples" => Any["examples/index.md"],
-             "Functions" => Any["functions/losses.md", "functions/regularizers.md"],
-             "Library" => Any["lib/losses.md", "lib/modeling.md"]]
+             "Examples" => Any["examples/walkthrough.md", "examples/additional_examples.md"],
+             "Usage" => Any["usage/modelling.md", "usage/losses.md", "usage/regularizers.md"],
+             "Library Reference" => Any["lib/losses.md", "lib/modeling.md"]]
          )
 deploydocs(repo = "github.com/reesepathak/EmpiricalRiskMinimization.jl.git",
            target = "build", 

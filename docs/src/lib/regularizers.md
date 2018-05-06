@@ -1,4 +1,4 @@
-# Modelling and training
+# Regularizers
 
 ```@meta
 CurrentModule = EmpiricalRiskMinimization
@@ -7,5 +7,5 @@ CurrentModule = EmpiricalRiskMinimization
 ```@autodocs
 Modules = [EmpiricalRiskMinimization]
 Order = [:type, :function]
-Pages = ["model.jl"]
+Pages = ["regularizers.jl"]
 ```

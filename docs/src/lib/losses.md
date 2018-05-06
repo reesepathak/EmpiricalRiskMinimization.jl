@@ -1,4 +1,4 @@
-# Loss functions
+# Losses
 
 ```@meta
 CurrentModule = EmpiricalRiskMinimization
