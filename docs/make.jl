@@ -10,7 +10,7 @@ makedocs(modules=[EmpiricalRiskMinimization],
              "Basic Usage" => Any["usage/introduction.md", "usage/installation.md"],
              "Examples" => Any["examples/index.md"],
              "Functions" => Any["functions/losses.md", "functions/regularizers.md"],
-             "Library" => Any["lib/losses.md"]]
+             "Library" => Any["lib/losses.md", "lib/modeling.md"]]
          )
 deploydocs(repo = "github.com/reesepathak/EmpiricalRiskMinimization.jl.git",
            target = "build", 
