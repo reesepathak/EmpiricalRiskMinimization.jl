@@ -64,4 +64,28 @@ var documenterSearchIndex = {"docs": [
     "text": ""
 },
 
+{
+    "location": "lib/losses.html#",
+    "page": "Loss functions",
+    "title": "Loss functions",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "lib/losses.html#EmpiricalRiskMinimization.SquareLoss",
+    "page": "Loss functions",
+    "title": "EmpiricalRiskMinimization.SquareLoss",
+    "category": "type",
+    "text": "SquareLoss()\n\nConstructs the squared loss or l2 loss.\n\n\n\n"
+},
+
+{
+    "location": "lib/losses.html#Loss-functions-1",
+    "page": "Loss functions",
+    "title": "Loss functions",
+    "category": "section",
+    "text": "CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nOrder = [:type, :function]\nPages = [\"losses.jl\"]"
+},
+
 ]}
