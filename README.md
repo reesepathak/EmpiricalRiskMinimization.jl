@@ -17,7 +17,7 @@ You should also invoke `Pkg.update()` frequently to ensure you receive our most 
 
 ## Documentation 
 We are working on providing more complete documentation. In the meantime, refer to the
-following draft of our [documentation.](https://reesepathak.github.io/EmpiricalRiskMinimization.jl/stable)
+following draft of our [documentation.](https://reesepathak.github.io/EmpiricalRiskMinimization.jl/latest)
 We encourage you to open an issue on GitHub if you encounter issues or if some functionality in the package is unstable or has
 unclear usage. 
 
