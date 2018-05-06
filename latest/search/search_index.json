@@ -2,18 +2,28 @@
     "docs": [
         {
             "location": "/", 
-            "text": "EmpiricalRiskMinimization.jl Docs\n\n\nEmpiricalRiskMinimization.jl is a Julia package which carries out numerical optimization  required to solved regularized empirical risk minimization problems. These problems  are found in numerous applications, including machine learning, control, computer vision, and  many more disciplines. The focus of this package is to provide easy-to-use interfaces,  putting the focus on finding the right model to use, rather than the one which may be cleanest  to implement. \n\n\n\n\nIndex", 
+            "text": "EmpiricalRiskMinimization.jl\n\n\nEmpiricalRiskMinimization.jl, abbreviated ERM or ERM.jl, is a Julia package which carries out numerical optimization  required to solved regularized empirical risk minimization problems. These problems  are found in numerous applications, including machine learning, control, computer vision, and  many more disciplines. The focus of this package is to provide easy-to-use interfaces,  putting the focus on finding the right model to use, rather than the one which may be cleanest  to implement. \n\n\n\n\nBasic Usage\n\n\n\n\nExamples\n\n\n\n\nFunctions", 
             "title": "Introduction"
         }, 
         {
-            "location": "/#empiricalriskminimizationjl-docs", 
-            "text": "EmpiricalRiskMinimization.jl is a Julia package which carries out numerical optimization  required to solved regularized empirical risk minimization problems. These problems  are found in numerous applications, including machine learning, control, computer vision, and  many more disciplines. The focus of this package is to provide easy-to-use interfaces,  putting the focus on finding the right model to use, rather than the one which may be cleanest  to implement.", 
-            "title": "EmpiricalRiskMinimization.jl Docs"
+            "location": "/#empiricalriskminimizationjl", 
+            "text": "EmpiricalRiskMinimization.jl, abbreviated ERM or ERM.jl, is a Julia package which carries out numerical optimization  required to solved regularized empirical risk minimization problems. These problems  are found in numerous applications, including machine learning, control, computer vision, and  many more disciplines. The focus of this package is to provide easy-to-use interfaces,  putting the focus on finding the right model to use, rather than the one which may be cleanest  to implement.", 
+            "title": "EmpiricalRiskMinimization.jl"
         }, 
         {
-            "location": "/#index", 
+            "location": "/#basic-usage", 
             "text": "", 
-            "title": "Index"
+            "title": "Basic Usage"
+        }, 
+        {
+            "location": "/#examples", 
+            "text": "", 
+            "title": "Examples"
+        }, 
+        {
+            "location": "/#functions", 
+            "text": "", 
+            "title": "Functions"
         }
     ]
 }
