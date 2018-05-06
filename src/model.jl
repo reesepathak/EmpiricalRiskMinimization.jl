@@ -2,45 +2,45 @@
 ##############################################################################
 # Results
 
-abstract type ErmResults end
+abstract type Results end
 
 
-mutable struct RegPathResults<:ErmResults
+mutable struct RegPathResults<:Results
     results    # list of PointResults
     imin       # index of lambda that minimizes test loss
 end
 
-mutable struct PointResults<:ErmResults
+mutable struct PointResults<:Results
     theta      # optimal theta
     lambda     # lambda used
     trainloss  # number
     testloss   # number
 end
 
-mutable struct FoldResults<:ErmResults
+mutable struct FoldResults<:Results
     results    # list of results, one per fold
 end
 
-mutable struct NoResults<:ErmResults end
+mutable struct NoResults<:Results end
 
 
 ##############################################################################
 # Data
 
-abstract type ErmData end
+abstract type Data end
 
 
-mutable struct FoldedData<:ErmData
+mutable struct FoldedData<:Data
     X
     Y
     nfolds
     foldrows
     nonfoldrows
-    results::ErmResults
+    results::Results
 end
 
 # Note both X and Y are 2 dimensional Arrays
-mutable struct SplitData<:ErmData 
+mutable struct SplitData<:Data 
     Xtrain
     Ytrain
     Xtest
@@ -48,16 +48,16 @@ mutable struct SplitData<:ErmData
     trainrows
     testrows
     trainfrac
-    results::ErmResults
+    results::Results
 end
 
-mutable struct NoData<:ErmData end
+mutable struct NoData<:Data end
 
 ##############################################################################
 # Model
 
 mutable struct Model
-    D::ErmData
+    D::Data
     loss::Loss
     regularizer::Regularizer
     solver::Solver
@@ -434,11 +434,6 @@ end
 getU(M::Model) = getU(M.S)
 getV(M::Model) = getV(M.S)
 getXY(M::Model) = getXY(M.S)
-
-#getd(M::Model) = getd(M.D)
-#getd(D::SplitData) = size(D.Xtrain,2)
-#getd(D::FoldedData) = size(D.X,2)
-    
 
 
 Xtest(M::Model) = selectfeatures(M, Xtest(M.D))

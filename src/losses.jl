@@ -1,6 +1,5 @@
-
 abstract type Loss end
-abstract type LossNonDiff <: Loss end
+abstract type LossNonDiff <: Loss end 
 abstract type LossDiff <: Loss end
 
 #########################################
@@ -10,7 +9,7 @@ struct SquareLoss <: LossDiff end
 
 # assume  y and yhat are m-dimensional vectors (even if m=1)
 function loss(L::SquareLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
-    return dot(yhat - y, yhat-y)
+    return dot(yhat - y, yhat - y)
 end
 
 # gradient wrt yhat
@@ -186,12 +185,9 @@ end
 # average loss
 
 function loss(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2})
-    l = 0
-    n = size(Yhat,1)
-    for i=1:n
-        l += loss(L, Yhat[i,:], Y[i,:])
-    end
-    return l/n
+    n = size(Yhat, 1)
+    L = sum(loss(L, Yhat[i, :], Y[i, :]) for i in 1:n)
+    return (1/n) * L 
 end
 
 ############################################################################## 

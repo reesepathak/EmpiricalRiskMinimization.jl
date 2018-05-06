@@ -1,4 +1,3 @@
-
 "Sigmoid function"
 sigm(u) = 1/(1 + exp(-u))
 
@@ -28,13 +27,7 @@ rms(x::Array{Float64,1}) = sqrt.( (1/length(x)) * (x'*x))
 rms(x::Array{Float64,2}) = rms(x[:])
 
 
-function findvalue(s, lst)
-    r = find(x->x==s, lst)
-    if length(r) == 0
-        return 0
-    end
-    return r[1]
-end
+findvalue(s, lst) = findfirst(lst, s)
 
 number(x::Number) = convert(Float64,x)
 number(x::String) = parse(Float64,x)

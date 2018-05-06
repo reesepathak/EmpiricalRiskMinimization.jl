@@ -13,14 +13,10 @@ include("losses.jl")
 export L1Reg, L2Reg, L1L2Reg, NoReg, PosReg
 include("regularizers.jl")
 
-# Embeddings
-# export Standardize, IdentityEmbed, PolyEmbed, AppendOneEmbed, PiecewiseEmbed, embed
-# include("embeddings.jl")
-
 include("source.jl")
 
 # GD function
-export minimize, minimize_unsupervised
+export minimize
 include("optimizer.jl")
 
 # Models
