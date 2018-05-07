@@ -4,11 +4,6 @@ module EmpiricalRiskMinimization
 
 using Compat
 
-# Internal imports (private)
-include("internal/source.jl") 
-include("internal/results_and_data.jl") # Results, Data
-include("internal/optimizer.jl") # Gradient descent, QR, CVX solvers
-
 # Losses
 export loss
 export SquareLoss, AbsoluteLoss, HuberLoss, HingeLoss, LogisticLoss, FrobeniusLoss
@@ -17,6 +12,11 @@ include("losses.jl")
 # Regularizers
 export L1Reg, L2Reg, L1L2Reg, NoReg, PosReg
 include("regularizers.jl")
+
+# Internal imports (private)
+include("internal/source.jl") 
+include("internal/results_and_data.jl") # Results, Data
+include("internal/optimizer.jl") # Gradient descent, QR, CVX solvers
 
 # Models
 export Model, Mldata, FoldedData
