@@ -57,3 +57,34 @@ specify a choice of theta. It defaults to `theta=thetaopt(M)`
 predict_v_from_u(M::Model, u::Array{T,1}, theta=thetaopt(M)) where {T<:Any} =  unembedY(M.S, predict_y_from_u(M, u, theta))
 predict_v_from_u(M::Model, U::Array{T,2}, theta=thetaopt(M)) where {T<:Any} =  rowwise(u -> predict_v_from_u(M, u, theta), U)
 
+
+function confusionx(vhat, v)
+    rows = length(Set(vhat))
+    cols = length(Set(v))
+    C = zeros(rows, cols)
+    n = size(v,1)
+    for k=1:n
+        i = convert(Int64, vhat[k])
+        j = convert(Int64, v[k])
+        C[i,j] += 1
+    end
+    return C
+end
+
+"""`confusion_train(M)`
+
+Returns the confusion matrix based on training data
+for a trained ERM model"""
+function confusion_train(M::Model)
+    vhat = predict_v_from_train(M)
+    return confusionx(vhat, Vtrain(M))
+end
+
+"""`confusion_test(M)`
+
+Returns the confusion matrix based on test data
+for a trained ERM model"""
+function confusion_test(M::Model)
+    vhat = predict_v_from_test(M)
+    return confusionx(vhat, Vtest(M))
+end

@@ -265,6 +265,32 @@ function applyfmap(FM::OrdinalFmap, uvframe, xyframe)
     appendcol(xyframe, FM.dest, u)
 end
 
+# maps dest to src
+# map back to categories by nearest neighbor
+function invertfmap(FM::OrdinalFmap, uvframe, xyframe)
+    destcol = findcolumn(FM.dest, xyframe)
+    x = columnvalues(xyframe, destcol)
+    n = length(x)
+    u = zeros(n)
+    for i=1:n
+        closestcat = 0
+        mindist = Inf
+        for j=1:length(FM.categories)
+            dist = abs(x[i]-j)
+            if dist < mindist
+                mindist = dist
+                closestcat = j
+            end
+        end
+        u[i]  = closestcat
+    end
+    srcframe, srccol = findcolumn(FM.src, uvframe, xyframe)
+    appendcol(srcframe, FM.src, u)
+end
+
+
+
+
 ##############################
 
 mutable struct FunctionFmap<:FeatureMap
