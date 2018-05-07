@@ -504,4 +504,60 @@ var documenterSearchIndex = {"docs": [
     "text": "The functions listed below are all the methods made available by ERM for predicting y and v values on training and testing data. See the corresponding usage page to understand how to use these functions.CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nOrder = [:type, :function]\nPages = [\"prediction.jl\"]"
 },
 
+{
+    "location": "lib/convenience.html#",
+    "page": "Convenience functions",
+    "title": "Convenience functions",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "lib/convenience.html#EmpiricalRiskMinimization.matrix-Union{Tuple{Array{T,1}}, Tuple{T}} where T",
+    "page": "Convenience functions",
+    "title": "EmpiricalRiskMinimization.matrix",
+    "category": "method",
+    "text": "Convert an n-vector to an nx1 array\n\n\n\n"
+},
+
+{
+    "location": "lib/convenience.html#EmpiricalRiskMinimization.sigm-Tuple{Any}",
+    "page": "Convenience functions",
+    "title": "EmpiricalRiskMinimization.sigm",
+    "category": "method",
+    "text": "Sigmoid function\n\n\n\n"
+},
+
+{
+    "location": "lib/convenience.html#EmpiricalRiskMinimization.findvalue-Tuple{Any,Any}",
+    "page": "Convenience functions",
+    "title": "EmpiricalRiskMinimization.findvalue",
+    "category": "method",
+    "text": "findvalue(s, lst): Find the first index of s in a list lst\n\n\n\n"
+},
+
+{
+    "location": "lib/convenience.html#EmpiricalRiskMinimization.rms-Tuple{Array{Float64,1}}",
+    "page": "Convenience functions",
+    "title": "EmpiricalRiskMinimization.rms",
+    "category": "method",
+    "text": "compute the rms of a matrix or a vector\n\n\n\n"
+},
+
+{
+    "location": "lib/convenience.html#EmpiricalRiskMinimization.rowwise-Union{Tuple{Any,Array{T,2}}, Tuple{T}} where T",
+    "page": "Convenience functions",
+    "title": "EmpiricalRiskMinimization.rowwise",
+    "category": "method",
+    "text": "Apply f to each row of a matrix. f should map vectors to vectors\n\n\n\n"
+},
+
+{
+    "location": "lib/convenience.html#Convenience-functions-1",
+    "page": "Convenience functions",
+    "title": "Convenience functions",
+    "category": "section",
+    "text": "ERM implements the following utility functions. CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nPages = [\"convenience.jl\"]"
+},
+
 ]}
