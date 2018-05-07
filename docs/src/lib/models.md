@@ -1,4 +1,4 @@
-# Modelling and training
+# Models and training
 
 ```@meta
 CurrentModule = EmpiricalRiskMinimization

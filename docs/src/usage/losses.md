@@ -1,1 +1,1 @@
-# Losses
+# [Losses](@id usage_losses)
