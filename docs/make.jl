@@ -3,7 +3,7 @@ using Documenter, EmpiricalRiskMinimization
 push!(LOAD_PATH, "../src/")
 
 makedocs(modules=[EmpiricalRiskMinimization],
-         repo="github.com/reesepathak/EmpiricalRiskMinimization.jl.git",
+         repo="http://github.com/reesepathak/EmpiricalRiskMinimization.jl.git",
          doctest=false, clean=true, debug=true,
          format=:html,
          sitename="EmpiricalRisk Minimization.jl",
