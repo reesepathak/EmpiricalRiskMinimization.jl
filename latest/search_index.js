@@ -169,54 +169,6 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "lib/models.html#EmpiricalRiskMinimization.predict_v_from_test",
-    "page": "Models and training",
-    "title": "EmpiricalRiskMinimization.predict_v_from_test",
-    "category": "function",
-    "text": "predict_v_from_test(M [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on test data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/models.html#EmpiricalRiskMinimization.predict_v_from_train",
-    "page": "Models and training",
-    "title": "EmpiricalRiskMinimization.predict_v_from_train",
-    "category": "function",
-    "text": "predict_v_from_train(M [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on train data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/models.html#EmpiricalRiskMinimization.predict_v_from_u-Union{Tuple{EmpiricalRiskMinimization.Model,Array{T,1},Any}, Tuple{EmpiricalRiskMinimization.Model,Array{T,1}}, Tuple{T}} where T",
-    "page": "Models and training",
-    "title": "EmpiricalRiskMinimization.predict_v_from_u",
-    "category": "method",
-    "text": "predict_y_from_u(M, U [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on one or many raw inputs, U. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/models.html#EmpiricalRiskMinimization.predict_y_from_test",
-    "page": "Models and training",
-    "title": "EmpiricalRiskMinimization.predict_y_from_test",
-    "category": "function",
-    "text": "predict_y_from_test(M [, theta])\n\nAllows you compute embedded predictions (i.e., y values) based on a trained ERM model M on test data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/models.html#EmpiricalRiskMinimization.predict_y_from_train",
-    "page": "Models and training",
-    "title": "EmpiricalRiskMinimization.predict_y_from_train",
-    "category": "function",
-    "text": "predict_y_from_train(M [, theta])\n\nAllows you compute embedded predictions (i.e., y values)  based on a trained ERM model M on train data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/models.html#EmpiricalRiskMinimization.predict_y_from_u-Union{Tuple{EmpiricalRiskMinimization.Model,Array{T,1},Any}, Tuple{EmpiricalRiskMinimization.Model,Array{T,1}}, Tuple{T}} where T",
-    "page": "Models and training",
-    "title": "EmpiricalRiskMinimization.predict_y_from_u",
-    "category": "method",
-    "text": "predict_y_from_u(M, U [, theta])\n\nAllows you compute embedded predictions (i.e., y values)  based on a trained ERM model M on one or many raw inputs, U. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
     "location": "lib/models.html#EmpiricalRiskMinimization.status-Tuple{IO,EmpiricalRiskMinimization.Model}",
     "page": "Models and training",
     "title": "EmpiricalRiskMinimization.status",
