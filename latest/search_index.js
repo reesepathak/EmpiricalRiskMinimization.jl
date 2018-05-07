@@ -37,7 +37,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Walkthrough",
     "title": "Walkthrough",
     "category": "section",
-    "text": "This page gives an overview of how to use EmpiricalRiskMinimization.jl on a basic dataset. "
+    "text": "This page gives you a very basic example of how to use EmpiricalRiskMinimization.jl, with links to other documentation pages to learn more about advanced functionality available within the package.Suppose we want to solve a regularized least square linear regression problem. Let\'s first generate some data.using EmpiricalRiskMinimization\nsrand(123)n = 2000; k = 30;\nd = k + 1;\nU = randn(n, k); theta = randn(d);\nv = [ones(n) U] * theta + 0.5 * randn(n);So, we\'ve generated 2000 random raw data points, occuping the rows of U. These data points have 30 features. Additionally, we generated targets v, so that v[i] is the label associated with example U[i, :].Formulating and solving (regularized) least square linear regression with ERM.jl is simple. The first step is to instantiate the modelM = Model(U, v, embedall=true);The option embedall=true takes U and compiles our true training data X, by appending the constant feature to the rows of U. Additionally, it standardizes our data for us. There are many more features available for training, embedding, and modelling. Of course, to specify a different model, users must specify different losses and regularizers. Training the model and getting the output is two lines of code.train(M)\nstatus(M)This training summary is useful, and is the most basic validation tool that ERM provides; cross-validation and repeated out-of-sample validation are also available.To assess the accuracy of the model on the train and test sets, we can compute the (average) train and test losses.println(\"Training error = $(trainloss(M))\")\nprintln(\"Testing error = $(testloss(M))\")Finally, suppose we actually want to retrieve our predictions on the test data.v_test_pred = predict_v_from_test(M);There are more prediction functions available. These allow you to provide alternative model parameters, unembed predictions, and test on various other datasets. "
 },
 
 {
@@ -57,17 +57,33 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "usage/modelling.html#",
-    "page": "ERM models",
-    "title": "ERM models",
+    "location": "examples/additional_examples.html#Examples-of-models-on-simple-data-1",
+    "page": "Usage examples",
+    "title": "Examples of models on simple data",
+    "category": "section",
+    "text": "These examples link to notebooks that demonstrate how to use ERM.jl for various common machine learning models. They use randomly generated data; the focus is on optional and extended features that ERM makes available to users.Linear regression\nRobust regression\nLogistic regression\nSupport vector machine"
+},
+
+{
+    "location": "examples/additional_examples.html#Examples-of-models-on-real-datasets-1",
+    "page": "Usage examples",
+    "title": "Examples of models on real datasets",
+    "category": "section",
+    "text": "These examples link to notebooks demonstrating ho wto use ERM.jl on real data. Many of these examples come from the EE104 lectures.Housing prices\nDiabetes progression "
+},
+
+{
+    "location": "usage/models.html#",
+    "page": "Models and training",
+    "title": "Models and training",
     "category": "page",
     "text": ""
 },
 
 {
-    "location": "usage/modelling.html#ERM-models-1",
-    "page": "ERM models",
-    "title": "ERM models",
+    "location": "usage/models.html#usage_models-1",
+    "page": "Models and training",
+    "title": "Models and training",
     "category": "section",
     "text": ""
 },
@@ -81,7 +97,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "usage/losses.html#Losses-1",
+    "location": "usage/losses.html#usage_losses-1",
     "page": "Losses",
     "title": "Losses",
     "category": "section",
@@ -97,11 +113,123 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "usage/regularizers.html#Regularizers-1",
+    "location": "usage/regularizers.html#usage_regularizers-1",
     "page": "Regularizers",
     "title": "Regularizers",
     "category": "section",
     "text": ""
+},
+
+{
+    "location": "usage/validation.html#",
+    "page": "Validation and out-of-sample testing",
+    "title": "Validation and out-of-sample testing",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "usage/validation.html#usage_validation-1",
+    "page": "Validation and out-of-sample testing",
+    "title": "Validation and out-of-sample testing",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "usage/prediction.html#",
+    "page": "Prediction",
+    "title": "Prediction",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "usage/prediction.html#usage_prediction-1",
+    "page": "Prediction",
+    "title": "Prediction",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "lib/models.html#",
+    "page": "Models and training",
+    "title": "Models and training",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "lib/models.html#EmpiricalRiskMinimization.Model",
+    "page": "Models and training",
+    "title": "EmpiricalRiskMinimization.Model",
+    "category": "type",
+    "text": "Model(...)\n\nThe Model() function constructs an ERM model. The typical invocation is  Model(U, V, Loss(), Reg()), where U and V specify raw inputs and targets,  respectively, and Loss() specifies some type of training loss (default: SquareLoss()) and Reg() specifies some type of regularizer (default: L2Reg(1.0)).  For more details, see the description of ERM models in the usage notes. \n\n\n\n"
+},
+
+{
+    "location": "lib/models.html#EmpiricalRiskMinimization.predict_v_from_test",
+    "page": "Models and training",
+    "title": "EmpiricalRiskMinimization.predict_v_from_test",
+    "category": "function",
+    "text": "predict_v_from_test(M [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on test data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/models.html#EmpiricalRiskMinimization.predict_v_from_train",
+    "page": "Models and training",
+    "title": "EmpiricalRiskMinimization.predict_v_from_train",
+    "category": "function",
+    "text": "predict_v_from_train(M [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on train data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/models.html#EmpiricalRiskMinimization.predict_v_from_u-Union{Tuple{EmpiricalRiskMinimization.Model,Array{T,1},Any}, Tuple{EmpiricalRiskMinimization.Model,Array{T,1}}, Tuple{T}} where T",
+    "page": "Models and training",
+    "title": "EmpiricalRiskMinimization.predict_v_from_u",
+    "category": "method",
+    "text": "predict_y_from_u(M, U [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on one or many raw inputs, U. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/models.html#EmpiricalRiskMinimization.predict_y_from_test",
+    "page": "Models and training",
+    "title": "EmpiricalRiskMinimization.predict_y_from_test",
+    "category": "function",
+    "text": "predict_y_from_test(M [, theta])\n\nAllows you compute embedded predictions (i.e., y values) based on a trained ERM model M on test data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/models.html#EmpiricalRiskMinimization.predict_y_from_train",
+    "page": "Models and training",
+    "title": "EmpiricalRiskMinimization.predict_y_from_train",
+    "category": "function",
+    "text": "predict_y_from_train(M [, theta])\n\nAllows you compute embedded predictions (i.e., y values)  based on a trained ERM model M on train data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/models.html#EmpiricalRiskMinimization.predict_y_from_u-Union{Tuple{EmpiricalRiskMinimization.Model,Array{T,1},Any}, Tuple{EmpiricalRiskMinimization.Model,Array{T,1}}, Tuple{T}} where T",
+    "page": "Models and training",
+    "title": "EmpiricalRiskMinimization.predict_y_from_u",
+    "category": "method",
+    "text": "predict_y_from_u(M, U [, theta])\n\nAllows you compute embedded predictions (i.e., y values)  based on a trained ERM model M on one or many raw inputs, U. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/models.html#EmpiricalRiskMinimization.status-Tuple{IO,EmpiricalRiskMinimization.Model}",
+    "page": "Models and training",
+    "title": "EmpiricalRiskMinimization.status",
+    "category": "method",
+    "text": "Prints and returns the status of the model.\n\n\n\n"
+},
+
+{
+    "location": "lib/models.html#Models-and-training-1",
+    "page": "Models and training",
+    "title": "Models and training",
+    "category": "section",
+    "text": "CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nOrder = [:type, :function]\nPages = [\"model.jl\"]"
 },
 
 {
@@ -129,83 +257,51 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "lib/modeling.html#",
-    "page": "Modelling and training",
-    "title": "Modelling and training",
+    "location": "lib/regularizers.html#",
+    "page": "Regularizers",
+    "title": "Regularizers",
     "category": "page",
     "text": ""
 },
 
 {
-    "location": "lib/modeling.html#EmpiricalRiskMinimization.Model",
-    "page": "Modelling and training",
-    "title": "EmpiricalRiskMinimization.Model",
-    "category": "type",
-    "text": "Model(...)\n\nThe Model() function constructs an ERM model. The typical invocation is  Model(U, V, Loss(), Reg()), where U and V specify raw inputs and targets,  respectively, and Loss() specifies some type of training loss (default: SquareLoss()) and Reg() specifies some type of regularizer (default: L2Reg(1.0)).  For more details, see the description of ERM models in the usage notes. \n\n\n\n"
-},
-
-{
-    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_v_from_test",
-    "page": "Modelling and training",
-    "title": "EmpiricalRiskMinimization.predict_v_from_test",
-    "category": "function",
-    "text": "predict_v_from_test(M [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on test data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_v_from_train",
-    "page": "Modelling and training",
-    "title": "EmpiricalRiskMinimization.predict_v_from_train",
-    "category": "function",
-    "text": "predict_v_from_train(M [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on train data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_v_from_u-Union{Tuple{EmpiricalRiskMinimization.Model,Array{T,1},Any}, Tuple{EmpiricalRiskMinimization.Model,Array{T,1}}, Tuple{T}} where T",
-    "page": "Modelling and training",
-    "title": "EmpiricalRiskMinimization.predict_v_from_u",
-    "category": "method",
-    "text": "predict_y_from_u(M, U [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on one or many raw inputs, U. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_y_from_test",
-    "page": "Modelling and training",
-    "title": "EmpiricalRiskMinimization.predict_y_from_test",
-    "category": "function",
-    "text": "predict_y_from_test(M [, theta])\n\nAllows you compute embedded predictions (i.e., y values) based on a trained ERM model M on test data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_y_from_train",
-    "page": "Modelling and training",
-    "title": "EmpiricalRiskMinimization.predict_y_from_train",
-    "category": "function",
-    "text": "predict_y_from_train(M [, theta])\n\nAllows you compute embedded predictions (i.e., y values)  based on a trained ERM model M on train data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_y_from_u-Union{Tuple{EmpiricalRiskMinimization.Model,Array{T,1},Any}, Tuple{EmpiricalRiskMinimization.Model,Array{T,1}}, Tuple{T}} where T",
-    "page": "Modelling and training",
-    "title": "EmpiricalRiskMinimization.predict_y_from_u",
-    "category": "method",
-    "text": "predict_y_from_u(M, U [, theta])\n\nAllows you compute embedded predictions (i.e., y values)  based on a trained ERM model M on one or many raw inputs, U. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
-},
-
-{
-    "location": "lib/modeling.html#EmpiricalRiskMinimization.status-Tuple{IO,EmpiricalRiskMinimization.Model}",
-    "page": "Modelling and training",
-    "title": "EmpiricalRiskMinimization.status",
-    "category": "method",
-    "text": "Prints and returns the status of the model.\n\n\n\n"
-},
-
-{
-    "location": "lib/modeling.html#Modelling-and-training-1",
-    "page": "Modelling and training",
-    "title": "Modelling and training",
+    "location": "lib/regularizers.html#Regularizers-1",
+    "page": "Regularizers",
+    "title": "Regularizers",
     "category": "section",
-    "text": "CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nOrder = [:type, :function]\nPages = [\"model.jl\"]"
+    "text": "CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nOrder = [:type, :function]\nPages = [\"regularizers.jl\"]"
+},
+
+{
+    "location": "lib/validation.html#",
+    "page": "Validation and out-of-sample testing",
+    "title": "Validation and out-of-sample testing",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "lib/validation.html#Validation-and-out-of-sample-testing-1",
+    "page": "Validation and out-of-sample testing",
+    "title": "Validation and out-of-sample testing",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "lib/prediction.html#",
+    "page": "Prediction",
+    "title": "Prediction",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "lib/prediction.html#Prediction-1",
+    "page": "Prediction",
+    "title": "Prediction",
+    "category": "section",
+    "text": ""
 },
 
 ]}
