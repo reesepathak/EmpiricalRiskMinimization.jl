@@ -1,10 +1,14 @@
 using Documenter, EmpiricalRiskMinimization
 
+push!(LOAD_PATH, "../src/")
+
 makedocs(modules=[EmpiricalRiskMinimization],
+         repo="github.com/reesepathak/EmpiricalRiskMinimization.jl.git",
          doctest=false, clean=true, debug=true,
          format=:html,
          sitename="EmpiricalRisk Minimization.jl",
-         authors="Reese Pathak, Guillermo Angeris, Sanjay Lall, Stephen Boyd.",
+         authors="Sanjay Lall, Reese Pathak, Guillermo Angeris, Stephen Boyd.",
+         checkdocks=:exported,
          pages=Any[
              "Home" => "index.md",
              "Examples" => Any["examples/walkthrough.md", "examples/additional_examples.md"],

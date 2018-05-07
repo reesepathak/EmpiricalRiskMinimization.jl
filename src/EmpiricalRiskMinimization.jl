@@ -19,9 +19,7 @@ include("internal/results_and_data.jl") # Results, Data
 include("internal/optimizer.jl") # Gradient descent, QR, CVX solvers
 
 # Models
-export Model, status, setfeatures
-export train, trainpath, trainfolds
-export Ytrain, Ytest, Xtrain, Xtest, Utrain, Utest, Vtrain, Vtest
+export Model, status, setfeatures, train, trainpath, trainfolds, Ytrain, Ytest, Xtrain, Xtest, Utrain, Utest, Vtrain, Vtest
 include("model.jl")
 
 # Validation

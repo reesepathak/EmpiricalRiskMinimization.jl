@@ -10,7 +10,5 @@ CurrentModule = EmpiricalRiskMinimization
 
 ```@autodocs
 Modules = [EmpiricalRiskMinimization]
-Order = [:type, :function]
-Public = true
 Pages = ["model.jl"]
 ```

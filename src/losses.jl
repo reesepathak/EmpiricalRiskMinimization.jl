@@ -169,7 +169,7 @@ end
 #########################################
 # Hinge Loss TODO
 #########################################
-"`HingeLoss() constructs the hinge loss (i.e., for SVM). Use with `Model()`."
+"`HingeLoss()` constructs the hinge loss (i.e., for SVM). Use with `Model()`."
 struct HingeLoss <: LossNonDiff end
 
 # should be different for m>1
