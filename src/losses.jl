@@ -5,11 +5,7 @@ abstract type LossDiff <: Loss end
 #########################################
 # Square Loss
 #########################################
-"""
-    SquareLoss()
-
-Constructs the squared loss or l2 loss.
-"""
+"`SquareLoss()` constructs the l2/squared loss. Use with `Model()`."
 struct SquareLoss <: LossDiff end
 
 # assume  y and yhat are m-dimensional vectors (even if m=1)
@@ -30,6 +26,7 @@ end
 #########################################
 # L1 Loss
 #########################################
+"`AbsoluteLoss()` constructs the l1/absolute loss. Use with `Model()`."
 struct AbsoluteLoss <: LossNonDiff end
 
 function loss(L::AbsoluteLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
@@ -78,6 +75,12 @@ end
 #########################################
 # Huber Loss
 #########################################
+"""`HuberLoss()` constructs Huber loss. 
+Use with `Model()`. 
+Can also invoke as `HuberLoss(alpha)`, which allows specification 
+of the tradeoff parameter `alpha` > 0. Note that `HuberLoss()` defaults 
+to `alpha = 1.0`. 
+"""
 struct HuberLoss <: LossDiff
     alpha::Float64
 end
@@ -166,6 +169,7 @@ end
 #########################################
 # Hinge Loss TODO
 #########################################
+"`HingeLoss() constructs the hinge loss (i.e., for SVM). Use with `Model()`."
 struct HingeLoss <: LossNonDiff end
 
 # should be different for m>1
@@ -179,6 +183,7 @@ end
 #########################################
 # Logistic Loss 
 #########################################
+"`LogisticLoss()` constructs the logistic loss for classification problems. Use with `Model()`"
 struct LogisticLoss <: LossDiff end
 
 loss(L::LogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(log.(1 + exp.(-yhat.*y)))
@@ -190,6 +195,7 @@ end
 #########################################
 # Sigmoid Loss 
 #########################################
+"`SigmoidLoss()` constructs the sigmoid loss for classification problems. Use with `Model()`"
 struct SigmoidLoss <: LossDiff end
 
 loss(L::SigmoidLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(1./(1 + exp.(yhat.*y)))

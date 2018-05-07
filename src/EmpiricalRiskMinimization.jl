@@ -6,11 +6,11 @@ using Compat
 
 # Losses
 export loss
-export SquareLoss, AbsoluteLoss, HuberLoss, HingeLoss, LogisticLoss, FrobeniusLoss
+export SquareLoss, AbsoluteLoss, HuberLoss, HingeLoss, LogisticLoss, SigmoidLoss
 include("losses.jl")
 
 # Regularizers
-export L1Reg, L2Reg, L1L2Reg, NoReg, PosReg
+export L1Reg, L2Reg, L1L2Reg, SqrtReg, NonnegReg
 include("regularizers.jl")
 
 # Internal imports (private)
@@ -19,10 +19,9 @@ include("internal/results_and_data.jl") # Results, Data
 include("internal/optimizer.jl") # Gradient descent, QR, CVX solvers
 
 # Models
-export Model, Mldata, FoldedData
-export train, trainpath, trainfolds, status
-export setfeatures
-export Ytrain, Ytest, Xtrain, Xtest
+export Model, status, setfeatures
+export train, trainpath, trainfolds
+export Ytrain, Ytest, Xtrain, Xtest, Utrain, Utest, Vtrain, Vtest
 include("model.jl")
 
 # Validation

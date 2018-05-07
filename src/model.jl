@@ -52,9 +52,6 @@ function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
     return M
 end
 ##############################################################################
-
-
-
 function getfoldrows(n, nfolds)
     # split into groups
     groups = [convert(Int64, round(x*n/nfolds)) for x in 1:nfolds]
@@ -99,9 +96,6 @@ function splitrows(n, trainfrac::Number; splitmethod=0)
     return trainrows, testrows
 end
 
-
-
-
 function setdata(M::Model)
     M.X, M.Y  = getXY(M.S)
     M.xydataisinvalid = false
@@ -121,7 +115,6 @@ function setregweights(M::Model)
         end
     end
 end
-
 
 function defaultembedding(M::Model; stand=true)
     addfeatureV(M, 1, stand=stand)
@@ -255,7 +248,13 @@ function trainpathx(M::Model, lambda::Array; quiet=true, kwargs...)
     return RegPathResults(results, imin)
 end
 
+"""`trainfolds(M [,lambda=1e-10, nfolds=5])` 
 
+The `trainfolds` function carries out n-fold cross validation on 
+a model `M`. Specify regularization weight through optional argument
+`lambda`, and the number of folds through `nfolds`. Default: 
+`lambda=1e-10`, and `nfolds=5`.
+"""
 function trainfolds(M::Model; lambda=1e-10, nfolds=5,
                     resplit=false, features=nothing, kwargs...)
     splitfolds(M, nfolds, resplit)
@@ -269,7 +268,22 @@ function trainfolds(M::Model; lambda=1e-10, nfolds=5,
     end
 end
 
+"""`trainpath(M [,lambda=logspace(-5, 5, 100), trainfrac=0.8])`
 
+The `trainpath` function trains a model `M` over a set of regularization weights. 
+Specify these weights by invoking the optional argument `lambda`, and set a train-test 
+ratio by using the optional argument `trainfrac`. 
+
+Defaults: 
+ -  `lambda=logspace(-5,5,100)` so training occurs over `lambda` between 1e-5 and 
+1e5. 
+ - `trainfrac=0.8`, so training occurs with a 80-20 train-test split.
+
+Example: `trainpath(M, lambda=logspace(-1, 1, 100))` trains over `lambda` between
+0.1 and 10. 
+
+Example `trainpath(M, trainfrac=0.75)` trains w/ 75-25 train-test split.
+"""
 function trainpath(M::Model; lambda=logspace(-5,5,100), trainfrac=0.8,
                    resplit=false, features=nothing, kwargs...)
     splittraintest(M; trainfrac=trainfrac, resplit=resplit)
@@ -283,7 +297,17 @@ function trainpath(M::Model; lambda=logspace(-5,5,100), trainfrac=0.8,
     end
 end
 
-
+"""`train(M [, lambda=1e-10, trainfrac=nothing])` 
+This function trains a model `M`. The usual invocation is 
+`train(M)`. Users may choose to specify a different choice of 
+regularization weight `lambda`. For example to specify 
+a weight of `lambda = 0.01`, one invokes 
+`train(M, lambda=0.001)`, and to specify a different train split, 
+one invokes `train(M, trainfrac=0.75`)`, which means that 
+75 percent of the data will be used for training and only 25 percent will 
+be used for test. The default parameters are 
+`lambda = 1e-10` and `trainfrac=nothing`, which will result in a 
+80-20 train-test split."""
 function train(M::Model; lambda=1e-10, trainfrac=nothing,
                resplit=false, features=nothing, kwargs...)
     splittraintest(M; trainfrac=trainfrac, resplit=resplit)
@@ -305,7 +329,7 @@ function assignsolver(M::Model, force=false)
     end
 end
 
-
+"`setfeatures(M, lst)` specifies the columns of the input data matrix `U` to use for training."
 function setfeatures(M::Model, f)
     M.featurelist = f
     setregweights(M)
@@ -443,6 +467,7 @@ function status(io::IO, M::Model)
     println(io, "----------------------------------------")
 end
 
+"""`status(M)` prints the status of the model after the most recent action performed on it."
 status(M::Model; kwargs...)  = status(STDOUT, M; kwargs...)
 
 

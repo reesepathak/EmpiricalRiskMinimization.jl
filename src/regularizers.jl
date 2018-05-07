@@ -34,6 +34,7 @@ end
 #########################################
 # L1 Regularizer
 #########################################
+"`L1Reg()` constructs the L1 regularizer. Use with `Model()`"
 struct L1Reg <: Regularizer end
 reg(R::L1Reg, a::Float64) = abs(a)
 cvxreg(R::L1Reg, a) = abs(a)
@@ -53,7 +54,7 @@ end
 #########################################
 # L2 Regularizer
 #########################################
-
+"`L2Reg()` constructs the L2 regularizer. Use with `Model()`"
 struct L2Reg <: Regularizer end
 reg(R::L2Reg, a::Float64) = a*a
 prox(R::L2Reg, gamma::Float64, v::Float64) = v*gamma/(1+gamma)
@@ -62,6 +63,7 @@ cvxreg(R::L2Reg, a) = a*a
 #########################################
 # Sqrt Regularizer
 #########################################
+"`SqrtReg()` computes the square root regularizer `sqrt(abs(x_i))`. Use with `Model()`"
 struct SqrtReg <: Regularizer end
 reg(R::SqrtReg, u::Float64) = sqrt(abs(u))
 
@@ -117,6 +119,7 @@ end
 #########################################
 # Nonneg Regularizer
 #########################################
+"`NonnegReg()` is the nonnegative regularizer. Use with `Model()`" 
 struct NonnegReg <: Regularizer end
 function reg(R::NonnegReg, a)
     if a >= 0
