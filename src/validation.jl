@@ -37,15 +37,25 @@ trainloss(M::Model,i) = trainloss(M.D.results,i)
 thetaopt(M::Model,i) = thetaopt(M.D.results,i)
 lambda(M::Model,i) = lambda(M.D.results,i)
 
+"`testloss(M)` returns the average testing loss"
 testloss(M::Model) = testloss(M.D.results)
+"`trainloss(M)` returns the average training loss"
 trainloss(M::Model) = trainloss(M.D.results)
+"`thetaopt(M)` returns the optimal `theta` chosen during training"
 thetaopt(M::Model) = thetaopt(M.D.results)
+"`lambda(M)` returns the `lambda` used during training. If multiple `lambda` values were specified,
+returns the optimal one"
 lambda(M::Model) = lambda(M.D.results)
 
+"`lambdaopt(M)` returns the optimal lambda computed during training of M"
 lambdaopt(M::Model) = lambdaopt(M.D.results)
 
+"`lambdapath(M)` returns the vector of lambdas used"
 lambdapath(M::Model) = lambdapath(M.D.results)
+"`testlosspath(M)` returns the vector of test losses at various lambdas"
 testlosspath(M::Model) = testlosspath(M.D.results)
+"`trainlosspath(M)` returns the vector of train losses at various lambdas"
 trainlosspath(M::Model) = trainlosspath(M.D.results)
+"`thetapath(M)` returns the vector of optimal thetas at various lambdas"
 thetapath(M::Model) = thetapath(M.D.results)
 ##############################################################################

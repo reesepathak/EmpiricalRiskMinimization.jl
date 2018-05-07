@@ -26,7 +26,7 @@ end
 rms(x::Array{Float64,1}) = sqrt.( (1/length(x)) * (x'*x))
 rms(x::Array{Float64,2}) = rms(x[:])
 
-
+"`findvalue(s, lst)`: Find the first index of `s` in a list `lst`"
 findvalue(s, lst) = findfirst(lst, s)
 
 number(x::Number) = convert(Float64,x)
