@@ -137,11 +137,67 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "lib/modeling.html#EmpiricalRiskMinimization.status-Tuple{EmpiricalRiskMinimization.Model}",
+    "location": "lib/modeling.html#EmpiricalRiskMinimization.Model",
+    "page": "Modelling and training",
+    "title": "EmpiricalRiskMinimization.Model",
+    "category": "type",
+    "text": "Model(...)\n\nThe Model() function constructs an ERM model. The typical invocation is  Model(U, V, Loss(), Reg()), where U and V specify raw inputs and targets,  respectively, and Loss() specifies some type of training loss (default: SquareLoss()) and Reg() specifies some type of regularizer (default: L2Reg(1.0)).  For more details, see the description of ERM models in the usage notes. \n\n\n\n"
+},
+
+{
+    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_v_from_test",
+    "page": "Modelling and training",
+    "title": "EmpiricalRiskMinimization.predict_v_from_test",
+    "category": "function",
+    "text": "predict_v_from_test(M [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on test data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_v_from_train",
+    "page": "Modelling and training",
+    "title": "EmpiricalRiskMinimization.predict_v_from_train",
+    "category": "function",
+    "text": "predict_v_from_train(M [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on train data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_v_from_u-Union{Tuple{EmpiricalRiskMinimization.Model,Array{T,1},Any}, Tuple{EmpiricalRiskMinimization.Model,Array{T,1}}, Tuple{T}} where T",
+    "page": "Modelling and training",
+    "title": "EmpiricalRiskMinimization.predict_v_from_u",
+    "category": "method",
+    "text": "predict_y_from_u(M, U [, theta])\n\nAllows you compute unembedded predictions (i.e., in V space)  based on a trained ERM model M on one or many raw inputs, U. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_y_from_test",
+    "page": "Modelling and training",
+    "title": "EmpiricalRiskMinimization.predict_y_from_test",
+    "category": "function",
+    "text": "predict_y_from_test(M [, theta])\n\nAllows you compute embedded predictions (i.e., y values) based on a trained ERM model M on test data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_y_from_train",
+    "page": "Modelling and training",
+    "title": "EmpiricalRiskMinimization.predict_y_from_train",
+    "category": "function",
+    "text": "predict_y_from_train(M [, theta])\n\nAllows you compute embedded predictions (i.e., y values)  based on a trained ERM model M on train data. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/modeling.html#EmpiricalRiskMinimization.predict_y_from_u-Union{Tuple{EmpiricalRiskMinimization.Model,Array{T,1},Any}, Tuple{EmpiricalRiskMinimization.Model,Array{T,1}}, Tuple{T}} where T",
+    "page": "Modelling and training",
+    "title": "EmpiricalRiskMinimization.predict_y_from_u",
+    "category": "method",
+    "text": "predict_y_from_u(M, U [, theta])\n\nAllows you compute embedded predictions (i.e., y values)  based on a trained ERM model M on one or many raw inputs, U. Option to  specify a choice of theta. It defaults to theta=thetaopt(M)\n\n\n\n"
+},
+
+{
+    "location": "lib/modeling.html#EmpiricalRiskMinimization.status-Tuple{IO,EmpiricalRiskMinimization.Model}",
     "page": "Modelling and training",
     "title": "EmpiricalRiskMinimization.status",
     "category": "method",
-    "text": "status(M) Prints and returns the status of the ERM model, M. Will only  print the most recent action (e.g., training, regularization path, etc.)  performed on the model. \n\n\n\n"
+    "text": "Prints and returns the status of the model.\n\n\n\n"
 },
 
 {
