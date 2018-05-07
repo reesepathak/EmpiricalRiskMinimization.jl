@@ -221,7 +221,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Models and training",
     "title": "Models and training",
     "category": "section",
-    "text": "These are the exported modelling and training functions and types made available by ERM. See the corresponding usage page to understand how to use these methods. Modules = [EmpiricalRiskMinimization]\nOrder = [:type, :function, :macro, :constant, :module]\nPages = [\"model.jl\"]"
+    "text": "These are the exported modelling and training functions and types made available by ERM. See the corresponding usage page to understand how to use these methods. CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nOrder = [:type, :function]\nPublic = true\nPages = [\"model.jl\"]"
 },
 
 {
