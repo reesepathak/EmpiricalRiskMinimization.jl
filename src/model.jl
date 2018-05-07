@@ -5,7 +5,7 @@
 The `Model()` function constructs an ERM model. The typical invocation is 
 `Model(U, V, Loss(), Reg())`, where `U` and `V` specify raw inputs and targets, 
 respectively, and `Loss()` specifies some type of training loss (default: `SquareLoss()`)
-and `Reg()` specifies some type of regularizer (default: `L2Reg(1.0)`). 
+and `Reg()` specifies some type of regularizer (default: `L2Reg()`). 
 For more details, see the description of ERM models in the usage notes. 
 """
 mutable struct Model
@@ -303,7 +303,7 @@ This function trains a model `M`. The usual invocation is
 regularization weight `lambda`. For example to specify 
 a weight of `lambda = 0.01`, one invokes 
 `train(M, lambda=0.001)`, and to specify a different train split, 
-one invokes `train(M, trainfrac=0.75`)`, which means that 
+one invokes `train(M, trainfrac=0.75)`, which means that 
 75 percent of the data will be used for training and only 25 percent will 
 be used for test. The default parameters are 
 `lambda = 1e-10` and `trainfrac=nothing`, which will result in a 

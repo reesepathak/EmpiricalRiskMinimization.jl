@@ -10,6 +10,6 @@ CurrentModule = EmpiricalRiskMinimization
 
 ```@autodocs
 Modules = [EmpiricalRiskMinimization]
-Order = [:type, :function]
+Order = [:function, :type]
 Pages = ["regularizers.jl"]
 ```

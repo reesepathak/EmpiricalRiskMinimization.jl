@@ -34,7 +34,9 @@ end
 #########################################
 # L1 Regularizer
 #########################################
-"`L1Reg()` constructs the L1 regularizer. Use with `Model()`"
+"""
+`L1Reg()` constructs the L1 regularizer. Use with `Model()`
+"""
 struct L1Reg <: Regularizer end
 reg(R::L1Reg, a::Float64) = abs(a)
 cvxreg(R::L1Reg, a) = abs(a)
