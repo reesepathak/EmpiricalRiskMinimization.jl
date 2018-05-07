@@ -467,7 +467,7 @@ function status(io::IO, M::Model)
     println(io, "----------------------------------------")
 end
 
-"""`status(M)` prints the status of the model after the most recent action performed on it."
+"""`status(M)` prints the status of the model after the most recent action performed on it."""
 status(M::Model; kwargs...)  = status(STDOUT, M; kwargs...)
 
 
