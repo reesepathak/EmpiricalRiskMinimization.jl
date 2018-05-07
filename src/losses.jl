@@ -168,10 +168,12 @@ end
 #########################################
 struct HingeLoss <: LossNonDiff end
 
+# should be different for m>1
 loss(L::HingeLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(max.(1 - yhat.*y, 0))
 
-function derivloss(L::HingeLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
-    return -y.*(1.0*(yhat.*y .<= 1.0))
+# scalars only
+function cvxloss(L::HingeLoss, yhat, y)
+    return max(1-yhat*y, 0)
 end
 
 #########################################
@@ -185,11 +187,25 @@ function derivloss(L::LogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return -(y./(1 + exp.(yhat.*y)))
 end
 
+#########################################
+# Sigmoid Loss 
+#########################################
+struct SigmoidLoss <: LossDiff end
+
+loss(L::SigmoidLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(1./(1 + exp.(yhat.*y)))
+
+function derivloss(L::SigmoidLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    return -(y.*exp.(yhat.*y))./(1 + exp.(yhat.*y))./(1 + exp.(yhat.*y))
+end
+
 
 ##############################################################################
 # average loss
 
 function loss(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2})
+    if size(Yhat,1) == 0
+        return 0
+    end
     n = size(Yhat, 1)
     L = sum(loss(L, Yhat[i, :], Y[i, :]) for i in 1:n)
     return (1/n) * L 
