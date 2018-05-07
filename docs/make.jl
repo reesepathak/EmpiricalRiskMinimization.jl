@@ -1,7 +1,7 @@
 using Documenter, EmpiricalRiskMinimization
 
 makedocs(modules=[EmpiricalRiskMinimization],
-         doctest=false, clean=true,
+         doctest=false, clean=true, debug=true,
          format=:html,
          sitename="EmpiricalRisk Minimization.jl",
          authors="Reese Pathak, Guillermo Angeris, Sanjay Lall, Stephen Boyd.",
