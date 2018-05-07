@@ -85,6 +85,46 @@ var documenterSearchIndex = {"docs": [
     "page": "Models and training",
     "title": "Models and training",
     "category": "section",
+    "text": "The basic primitive of EmpiricalRiskMinimization.jl is the model type."
+},
+
+{
+    "location": "usage/models.html#Creating-a-Model-1",
+    "page": "Models and training",
+    "title": "Creating a Model",
+    "category": "section",
+    "text": "There are many ways to instantiate a model. You use the function Model(...) do so. It has the following definitionfunction Model(U, V; loss=SquareLoss(), reg=L2Reg(),\n               Unames = nothing, Vnames = nothing,\n               embedall = false, verbose=false, kwargs...)The first two arguments specify the data: inputs U and targets V. There are many keyword arguments:loss specifies the loss (also called risk) function that will be used to train your model.\nreg specifies the regularizer on the model parameters.\nUnames and Vnames specify names for the columns of U and V, respectively. This mainly applies todatasets that are not entirely numerical.embedall determines whether all of the data in U and V will be used to train. If it is set to true, thenU and V are standardized and a constant feature is added to U, giving X and Y.verbose allows users to see more of the progress that occurs during model usage. It will automatically callstatus() at the end of model actions (see below). "
+},
+
+{
+    "location": "usage/models.html#Default-parameters-1",
+    "page": "Models and training",
+    "title": "Default parameters",
+    "category": "section",
+    "text": "Suppose you create a model on U and v using the following line of code.M = Model(U, V)This specifies a squared loss, and l2 regularization. Additionally, it will create X by standardizing U and adding a constant feature, and it will create Y by standardizing V. Addditionally, it will put regularization on all the weights except for the first weight, corresponding to the constant feature. The simplest way to describe this model is a regularized least squares regression model with regularization on the non-constant parameters."
+},
+
+{
+    "location": "usage/models.html#Specifying-different-models-1",
+    "page": "Models and training",
+    "title": "Specifying different models",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "usage/models.html#Training-1",
+    "page": "Models and training",
+    "title": "Training",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "usage/models.html#Status-1",
+    "page": "Models and training",
+    "title": "Status",
+    "category": "section",
     "text": ""
 },
 
@@ -101,7 +141,23 @@ var documenterSearchIndex = {"docs": [
     "page": "Losses",
     "title": "Losses",
     "category": "section",
-    "text": ""
+    "text": "Below we enumerate the loss functions implemented by ERM, and provide their mathematical definition. Some loss functions (e.g., HuberLoss) accept parameters. "
+},
+
+{
+    "location": "usage/losses.html#Mathematical-definitions-1",
+    "page": "Losses",
+    "title": "Mathematical definitions",
+    "category": "section",
+    "text": "name ERM Loss mathematical definition notes\nsquared SquareLoss() l^mathrmsqr(widehaty y) = (widehaty - y)^2 n/a\nabsolute AbsoluteLoss() l^mathrmabs(widehat y y) =  widehat y - y n/a\ntilted TiltedLoss() l^mathrmtlt(widehat y y) = tau(widehat y - y)_+ + (1 - tau)(widehat y - y)_- 0  tau  1\ndeadzone DeadzoneLoss() l^mathrmdz(widehat y y) = max(widehat y - y - alpha 0) alpha geq 0\nHuber HuberLoss() l^mathrmhub(widehat y y) = begincases (widehaty - y)^2  widehaty - y leq alpha  alpha(2widehaty - alpha)  widehaty - y  alpha endcases alpha geq 0\nlog Huber LogHuberLoss() l^mathrmdh(widehat y y) = begincases (widehaty - y)^2  widehaty - y leq alpha  alpha^2(1 + 2(log(widehaty - y) - log(alpha)))  widehaty - y  alpha endcases alpha geq 0\nhinge HingeLoss() l^mathrmhng(widehat y y) = max(1 - widehaty y 0) n/a\nlogistic LogisticLoss() $l^{\\mathrm{lgt}}(\\widehat y, y) = $ n/a\nsigmoid SigmoidLoss() $l^{\\mathrm{sigm}}(\\widehat y, y) = $ n/aA good reference for loss functions are the EE104 lecture slides. In particular, the lecture on non-quadratic losses is helpful."
+},
+
+{
+    "location": "usage/losses.html#Passing-parameters-1",
+    "page": "Losses",
+    "title": "Passing parameters",
+    "category": "section",
+    "text": "Some of the loss functions above accept parameters. To pass a parameter, simply provide it as the only argument to the Loss constructor. For example, to provide alpha for l^mathrmhub, simply instantiate the loss with HuberLoss(alpha) where alpha >= 0."
 },
 
 {
@@ -117,7 +173,15 @@ var documenterSearchIndex = {"docs": [
     "page": "Regularizers",
     "title": "Regularizers",
     "category": "section",
-    "text": ""
+    "text": "Below we enumerate the regularizers implemented by ERM, and provide their mathematical definition. See the validation page for information about regularization paths."
+},
+
+{
+    "location": "usage/regularizers.html#Mathematical-definitions-1",
+    "page": "Regularizers",
+    "title": "Mathematical definitions",
+    "category": "section",
+    "text": "name ERM Regularizer mathematical definition notes\nL2 (ell_2) L2Reg() r(theta) = theta_2 = left(sum_i=1^n (theta_i)^2right)^frac12 convex\nL1 (ell_1) L1Reg() r(theta) = theta_1 = sum_i=1^ntheta_i convex, sparsifying\nSquare root (ell_05) SqrtReg() r(theta) = left(sum_i=1^n theta_i^12 right)^2 non-convex, sparsifying\nNonnegative NonnegReg() r(theta) = begincases 0  theta_i geq 0 text  for all i  +infty  textelse endcases convexA good reference for regularizers are the EE104 lecture slides. In particular, the lecture on non-quadratic regularizers is helpful."
 },
 
 {
@@ -137,6 +201,30 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "usage/validation.html#Validation-on-a-single-test-set-1",
+    "page": "Validation and out-of-sample testing",
+    "title": "Validation on a single test set",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "usage/validation.html#Cross-fold-validation-1",
+    "page": "Validation and out-of-sample testing",
+    "title": "Cross-fold validation",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "usage/validation.html#usage_regpath-1",
+    "page": "Validation and out-of-sample testing",
+    "title": "Regularization paths",
+    "category": "section",
+    "text": ""
+},
+
+{
     "location": "usage/prediction.html#",
     "page": "Prediction",
     "title": "Prediction",
@@ -148,6 +236,22 @@ var documenterSearchIndex = {"docs": [
     "location": "usage/prediction.html#usage_prediction-1",
     "page": "Prediction",
     "title": "Prediction",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "usage/prediction.html#Using-a-trained-model-on-new-data-1",
+    "page": "Prediction",
+    "title": "Using a trained model on new data",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "usage/prediction.html#Recovering-losses-1",
+    "page": "Prediction",
+    "title": "Recovering losses",
     "category": "section",
     "text": ""
 },
