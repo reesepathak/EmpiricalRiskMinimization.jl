@@ -54,8 +54,15 @@ end
 mutable struct NoData<:Data end
 
 ##############################################################################
-# Model
+# Model and alternative constructors. 
+"""`Model(...)`
 
+The `Model()` function constructs an ERM model. The typical invocation is 
+`Model(U, V, Loss(), Reg())`, where `U` and `V` specify raw inputs and targets, 
+respectively, and `Loss()` specifies some type of training loss (default: `SquareLoss()`)
+and `Reg()` specifies some type of regularizer (default: `L2Reg(1.0)`). 
+For more details, see the description of ERM models in the usage notes. 
+"""
 mutable struct Model
     D::Data
     loss::Loss
@@ -72,6 +79,33 @@ mutable struct Model
     disinvalid::Bool
 end
 
+function Model(S::DataSource, loss, reg, verbose)
+    M =  Model(NoData(), loss, reg, DefaultSolver(), S,
+               nothing, nothing, #X,Y
+               "all", # featurelist
+               nothing, #regweights
+               false, #istrained
+               verbose, #verbose
+               true, # xydataisinvalid
+               true  # disinvalid 
+               )
+    setdata(M)
+    return M
+end
+
+function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
+               Unames = nothing, Vnames = nothing,
+               embedall = false, verbose=false, kwargs...)
+    S = makeFrameSource(U, V, Unames, Vnames)
+    M = Model(S, loss, reg, verbose)
+    if embedall
+        if M.verbose
+            println("Model: applying default embedding")
+        end
+        defaultembedding(M; kwargs...)
+    end
+    return M
+end
 ##############################################################################
 
 
@@ -123,39 +157,63 @@ end
 
 
 ##############################################################################
-
-
-
-##############################################################################
 # predict
-
-
-
 
 # if x happens to be a scalar, do we want this to work?
 # predict(M::Model, x::Number,            theta=thetaopt(M))   = [x*theta]
-
 # "predict" could be called "predict_y_from_x"
 # for each record, x,y,u,v are always vectors
 predict(M::Model, x::Array{Float64, 1}, theta=thetaopt(M))   = [dot(x, theta)]
-
 # following could be defined using rowwise, but efficiency might dictate otherwise
 predict(M::Model, X::Array{Float64, 2}, theta=thetaopt(M))   = X*theta
 
+"""`predict_y_from_test(M [, theta])`
+
+Allows you compute embedded predictions (i.e., y values) based on a trained ERM model M on test data. Option to 
+specify a choice of theta. It defaults to `theta=thetaopt(M)`
+"""
 predict_y_from_test(M::Model,                   theta=thetaopt(M))   = predict(M, Xtest(M), theta)
+
+"""`predict_y_from_train(M [, theta])`
+
+Allows you compute embedded predictions (i.e., y values)  based on a trained ERM model M on train data. Option to 
+specify a choice of theta. It defaults to `theta=thetaopt(M)`
+"""
 predict_y_from_train(M::Model,                  theta=thetaopt(M))   = predict(M, Xtrain(M), theta)
+
+"""`predict_v_from_test(M [, theta])`
+
+Allows you compute unembedded predictions (i.e., in V space) 
+based on a trained ERM model M on test data. Option to 
+specify a choice of theta. It defaults to `theta=thetaopt(M)`
+"""
 predict_v_from_test(M::Model,                   theta=thetaopt(M))   = unembedY(M.S, predict(M, Xtest(M), theta))
+
+"""`predict_v_from_train(M [, theta])`
+
+Allows you compute unembedded predictions (i.e., in V space) 
+based on a trained ERM model M on train data. Option to 
+specify a choice of theta. It defaults to `theta=thetaopt(M)`
+"""
 predict_v_from_train(M::Model,                  theta=thetaopt(M))   = unembedY(M.S, predict(M, Xtrain(M), theta))
 
+"""`predict_y_from_u(M, U [, theta])`
+
+Allows you compute embedded predictions (i.e., y values) 
+based on a trained ERM model M on one or many raw inputs, `U`. Option to 
+specify a choice of theta. It defaults to `theta=thetaopt(M)`
+"""
 predict_y_from_u(M::Model, u::Array{T,1}, theta=thetaopt(M)) where {T<:Any} =  predict(M::Model, embedU(M.S, u), theta)
 predict_y_from_u(M::Model, U::Array{T,2}, theta=thetaopt(M)) where {T<:Any} =  rowwise(u -> predict_y_from_u(M, u, theta), U)
 
+"""`predict_y_from_u(M, U [, theta])`
+
+Allows you compute unembedded predictions (i.e., in V space) 
+based on a trained ERM model M on one or many raw inputs, `U`. Option to 
+specify a choice of theta. It defaults to `theta=thetaopt(M)`
+"""
 predict_v_from_u(M::Model, u::Array{T,1}, theta=thetaopt(M)) where {T<:Any} =  unembedY(M.S, predict_y_from_u(M, u, theta))
 predict_v_from_u(M::Model, U::Array{T,2}, theta=thetaopt(M)) where {T<:Any} =  rowwise(u -> predict_v_from_u(M, u, theta), U)
-
-
-
-
 
 
 ##############################################################################
@@ -189,38 +247,6 @@ function defaultembedding(M::Model; stand=true)
         addfeatureU(M, i, stand=stand)
     end
 end
-
-function Model(S::DataSource, loss, reg, verbose)
-    M =  Model(NoData(), loss, reg, DefaultSolver(), S,
-               nothing, nothing, #X,Y
-               "all", # featurelist
-               nothing, #regweights
-               false, #istrained
-               verbose, #verbose
-               true, # xydataisinvalid
-               true  # disinvalid 
-               )
-    setdata(M)
-    return M
-end
-
-##############################################################################
-
-function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
-               Unames = nothing, Vnames = nothing,
-               embedall = false, verbose=false, kwargs...)
-    S = makeFrameSource(U, V, Unames, Vnames)
-    M = Model(S, loss, reg, verbose)
-    if embedall
-        if M.verbose
-            println("Model: applying default embedding")
-        end
-        defaultembedding(M; kwargs...)
-    end
-    return M
-end
-
-
 
 
 ##############################################################################
@@ -573,6 +599,9 @@ function status(io::IO, R::PointResults)
     println(io, "  test loss: ", testloss(R))
 end
 
+"""
+Prints and returns the status of the model.
+"""
 function status(io::IO, M::Model)
     status(io, M.D.results)
     println(io, "  training samples: ", length(Ytrain(M)))
@@ -581,9 +610,4 @@ function status(io::IO, M::Model)
     println(io, "----------------------------------------")
 end
 
-"""`status(M)`
-Prints and returns the status of the ERM model, `M`. Will only 
-print the most recent action (e.g., training, regularization path, etc.) 
-performed on the model. 
-"""
 status(M::Model; kwargs...)  = status(STDOUT, M; kwargs...)
