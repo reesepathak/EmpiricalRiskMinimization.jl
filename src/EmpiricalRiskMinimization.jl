@@ -23,13 +23,19 @@ include("optimizer.jl")
 export Model, Mldata, FoldedData
 export train, trainpath, trainfolds, status
 export setfeatures
+export Ytrain, Ytest, Xtrain, Xtest
+include("model.jl")
+
+# prediction
 export predict
 export predict_y_from_test, predict_y_from_train, predict_v_from_test, predict_v_from_train
 export predict_y_from_u, predict_y_from_u, predict_v_from_u, predict_v_from_u
+include("prediction.jl")
+
+# validation
 export thetaopt, trainloss, testloss, lambda, lambdaopt
 export lambdapath, testlosspath, trainlosspath, thetapath
-export Ytrain, Ytest, Xtrain, Xtest
-include("model.jl")
+include("validation.jl")
 
 # Utility functions
 export sigm, matrix

@@ -1,58 +1,3 @@
-
-##############################################################################
-# Results
-
-abstract type Results end
-
-
-mutable struct RegPathResults<:Results
-    results    # list of PointResults
-    imin       # index of lambda that minimizes test loss
-end
-
-mutable struct PointResults<:Results
-    theta      # optimal theta
-    lambda     # lambda used
-    trainloss  # number
-    testloss   # number
-end
-
-mutable struct FoldResults<:Results
-    results    # list of results, one per fold
-end
-
-mutable struct NoResults<:Results end
-
-
-##############################################################################
-# Data
-
-abstract type Data end
-
-
-mutable struct FoldedData<:Data
-    X
-    Y
-    nfolds
-    foldrows
-    nonfoldrows
-    results::Results
-end
-
-# Note both X and Y are 2 dimensional Arrays
-mutable struct SplitData<:Data 
-    Xtrain
-    Ytrain
-    Xtest
-    Ytest
-    trainrows
-    testrows
-    trainfrac
-    results::Results
-end
-
-mutable struct NoData<:Data end
-
 ##############################################################################
 # Model and alternative constructors. 
 """`Model(...)`
@@ -156,67 +101,6 @@ end
 
 
 
-##############################################################################
-# predict
-
-# if x happens to be a scalar, do we want this to work?
-# predict(M::Model, x::Number,            theta=thetaopt(M))   = [x*theta]
-# "predict" could be called "predict_y_from_x"
-# for each record, x,y,u,v are always vectors
-predict(M::Model, x::Array{Float64, 1}, theta=thetaopt(M))   = [dot(x, theta)]
-# following could be defined using rowwise, but efficiency might dictate otherwise
-predict(M::Model, X::Array{Float64, 2}, theta=thetaopt(M))   = X*theta
-
-"""`predict_y_from_test(M [, theta])`
-
-Allows you compute embedded predictions (i.e., y values) based on a trained ERM model M on test data. Option to 
-specify a choice of theta. It defaults to `theta=thetaopt(M)`
-"""
-predict_y_from_test(M::Model,                   theta=thetaopt(M))   = predict(M, Xtest(M), theta)
-
-"""`predict_y_from_train(M [, theta])`
-
-Allows you compute embedded predictions (i.e., y values)  based on a trained ERM model M on train data. Option to 
-specify a choice of theta. It defaults to `theta=thetaopt(M)`
-"""
-predict_y_from_train(M::Model,                  theta=thetaopt(M))   = predict(M, Xtrain(M), theta)
-
-"""`predict_v_from_test(M [, theta])`
-
-Allows you compute unembedded predictions (i.e., in V space) 
-based on a trained ERM model M on test data. Option to 
-specify a choice of theta. It defaults to `theta=thetaopt(M)`
-"""
-predict_v_from_test(M::Model,                   theta=thetaopt(M))   = unembedY(M.S, predict(M, Xtest(M), theta))
-
-"""`predict_v_from_train(M [, theta])`
-
-Allows you compute unembedded predictions (i.e., in V space) 
-based on a trained ERM model M on train data. Option to 
-specify a choice of theta. It defaults to `theta=thetaopt(M)`
-"""
-predict_v_from_train(M::Model,                  theta=thetaopt(M))   = unembedY(M.S, predict(M, Xtrain(M), theta))
-
-"""`predict_y_from_u(M, U [, theta])`
-
-Allows you compute embedded predictions (i.e., y values) 
-based on a trained ERM model M on one or many raw inputs, `U`. Option to 
-specify a choice of theta. It defaults to `theta=thetaopt(M)`
-"""
-predict_y_from_u(M::Model, u::Array{T,1}, theta=thetaopt(M)) where {T<:Any} =  predict(M::Model, embedU(M.S, u), theta)
-predict_y_from_u(M::Model, U::Array{T,2}, theta=thetaopt(M)) where {T<:Any} =  rowwise(u -> predict_y_from_u(M, u, theta), U)
-
-"""`predict_y_from_u(M, U [, theta])`
-
-Allows you compute unembedded predictions (i.e., in V space) 
-based on a trained ERM model M on one or many raw inputs, `U`. Option to 
-specify a choice of theta. It defaults to `theta=thetaopt(M)`
-"""
-predict_v_from_u(M::Model, u::Array{T,1}, theta=thetaopt(M)) where {T<:Any} =  unembedY(M.S, predict_y_from_u(M, u, theta))
-predict_v_from_u(M::Model, U::Array{T,2}, theta=thetaopt(M)) where {T<:Any} =  rowwise(u -> predict_v_from_u(M, u, theta), U)
-
-
-##############################################################################
 
 function setdata(M::Model)
     M.X, M.Y  = getXY(M.S)
@@ -489,57 +373,6 @@ Ytest(D::SplitData) = D.Ytest
 import Base.split
 split(M::Model; kwargs...) = splittraintest(M; force=true, kwargs...)
 
-##############################################################################
-# querying results
-
-testloss(R::PointResults) = R.testloss
-trainloss(R::PointResults) = R.trainloss
-thetaopt(R::PointResults) = R.theta
-lambda(R::PointResults) = R.lambda
-
-testloss(R::FoldResults,i) = testloss(R.results[i])
-trainloss(R::FoldResults,i) = trainloss(R.results[i])
-thetaopt(R::FoldResults,i) = thetaopt(R.results[i])
-lambda(R::FoldResults,i) = lambda(R.results[i])
-
-
-lambdapath(R::RegPathResults) = [r.lambda for r in R.results]
-testlosspath(R::RegPathResults) = [r.testloss for r in R.results]
-trainlosspath(R::RegPathResults) = [r.trainloss for r in R.results]
-
-testloss(R::RegPathResults) = testloss(R.results[R.imin])
-trainloss(R::RegPathResults) = trainloss(R.results[R.imin])
-thetaopt(R::RegPathResults) = thetaopt(R.results[R.imin])
-lambdaopt(R::RegPathResults) = lambda(R.results[R.imin])
-
-function thetapath(R::RegPathResults)
-    r = length(R.results)
-    d = length(R.results[1].theta)
-    T = zeros(d,r)
-    for i=1:r
-        T[:,i] = R.results[i].theta
-    end
-    return T'
-end
-
-testloss(M::Model,i) = testloss(M.D.results,i)
-trainloss(M::Model,i) = trainloss(M.D.results,i)
-thetaopt(M::Model,i) = thetaopt(M.D.results,i)
-lambda(M::Model,i) = lambda(M.D.results,i)
-
-testloss(M::Model) = testloss(M.D.results)
-trainloss(M::Model) = trainloss(M.D.results)
-thetaopt(M::Model) = thetaopt(M.D.results)
-lambda(M::Model) = lambda(M.D.results)
-
-lambdaopt(M::Model) = lambdaopt(M.D.results)
-
-lambdapath(M::Model) = lambdapath(M.D.results)
-testlosspath(M::Model) = testlosspath(M.D.results)
-trainlosspath(M::Model) = trainlosspath(M.D.results)
-thetapath(M::Model) = thetapath(M.D.results)
-
-##############################################################################
 
 function addfeatureU(M::Model; rebuild=true, kwargs...)
     M.xydataisinvalid = true
@@ -611,3 +444,57 @@ function status(io::IO, M::Model)
 end
 
 status(M::Model; kwargs...)  = status(STDOUT, M; kwargs...)
+##############################################################################
+# Results
+
+abstract type Results end
+
+
+mutable struct RegPathResults<:Results
+    results    # list of PointResults
+    imin       # index of lambda that minimizes test loss
+end
+
+mutable struct PointResults<:Results
+    theta      # optimal theta
+    lambda     # lambda used
+    trainloss  # number
+    testloss   # number
+end
+
+mutable struct FoldResults<:Results
+    results    # list of results, one per fold
+end
+
+mutable struct NoResults<:Results end
+
+
+##############################################################################
+# Data
+
+abstract type Data end
+
+
+mutable struct FoldedData<:Data
+    X
+    Y
+    nfolds
+    foldrows
+    nonfoldrows
+    results::Results
+end
+
+# Note both X and Y are 2 dimensional Arrays
+mutable struct SplitData<:Data 
+    Xtrain
+    Ytrain
+    Xtest
+    Ytest
+    trainrows
+    testrows
+    trainfrac
+    results::Results
+end
+
+mutable struct NoData<:Data end
+
