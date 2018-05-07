@@ -221,7 +221,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Models and training",
     "title": "Models and training",
     "category": "section",
-    "text": "These are the exported modelling and training functions and types made available by ERM. See the corresponding usage page to understand how to use these methods. CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nOrder = [:type, :function]\nPublic = true\nPages = [\"model.jl\"]"
+    "text": "These are the exported modelling and training functions and types made available by ERM. See the corresponding usage page to understand how to use these methods. CurrentModule = EmpiricalRiskMinimizationModules = [EmpiricalRiskMinimization]\nPages = [\"model.jl\"]"
 },
 
 {
@@ -245,7 +245,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Losses",
     "title": "EmpiricalRiskMinimization.HingeLoss",
     "category": "type",
-    "text": "HingeLoss() constructs the hinge loss (i.e., for SVM). Use withModel()`.\n\n\n\n"
+    "text": "HingeLoss() constructs the hinge loss (i.e., for SVM). Use with Model().\n\n\n\n"
 },
 
 {
