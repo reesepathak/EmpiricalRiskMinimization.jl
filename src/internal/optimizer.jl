@@ -154,12 +154,6 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
         return dtheta/n
     end
 
-    #@printf("regparam = %.19f\n", regparam)
-    #if theta_guess != nothing
-    #    @printf("theta_guess[1] = %.19f\n\n", theta_guess[1])
-    #    @printf("theta_guess[2] = %.19f\n", theta_guess[2])
-    #end
-    
     theta =  proxgradient(d, f, gradf, g, proxg, S; theta_guess = theta_guess)
     return matrix(theta)
 end
@@ -203,12 +197,10 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
     k=1
     
     # loop
-    # println("------ start ----")
     for k=1:max_iters-1
         gamma = gammas[k]
         theta = thetas[:,k]
         fg = fs[k] + gs[k]
-        
 
         # printing
         if verbose
@@ -217,20 +209,12 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
 
         gradfs[:,k] = gradf(theta)
 
-        #println("iteration: ",k)
-        #println("theta = ", theta)
-        #println("gradfs = ", gradfs[:,k])
-
         # line search
         while true
             v = theta - gradfs[:,k]/(2*gamma)
             theta_next = proxg(gamma, v)
-            #println("theta_next = ", theta_next)
-
             f_next = f(theta_next) 
             g_next = g(theta_next)
-
-            #println("theta = ", theta)
 
             # should be <= not < else can get stuck if g is an indicator function
             if f_next + g_next <= fg
@@ -240,10 +224,6 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
             else
                 # decrease the step size and try again
                 gamma = gamma*2
-                #if gamma  > 1e24
-                #    println("gamma = ", gamma)
-                #    sleep(0.1)
-                #end
             end
         end
         # save the variables
