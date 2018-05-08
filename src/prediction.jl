@@ -59,9 +59,8 @@ predict_v_from_u(M::Model, U::Array{T,2}, theta=thetaopt(M)) where {T<:Any} =  r
 
 
 function confusionx(vhat, v)
-    rows = length(Set(vhat))
-    cols = length(Set(v))
-    C = zeros(rows, cols)
+    K = length(Set(v))
+    C = zeros(K,K)
     n = size(v,1)
     for k=1:n
         i = convert(Int64, vhat[k])

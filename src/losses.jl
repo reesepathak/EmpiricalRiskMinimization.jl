@@ -189,7 +189,7 @@ struct LogisticLoss <: LossDiff end
 loss(L::LogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(log.(1 + exp.(-yhat.*y)))
 
 function derivloss(L::LogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
-    return -(y./(1 + exp.(yhat.*y)))
+    return -(y.*exp.(-yhat.*y))./(1 + exp.(-yhat.*y))
 end
 
 #########################################
@@ -203,6 +203,32 @@ loss(L::SigmoidLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(1./(1 + 
 function derivloss(L::SigmoidLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return -(y.*exp.(yhat.*y))./(1 + exp.(yhat.*y))./(1 + exp.(yhat.*y))
 end
+
+
+##############################################################################
+# RocLoss
+##############################################################################
+
+struct DiffRocLoss <: LossDiff
+    kappa
+    ypos
+    loss2
+end
+
+function loss(L::DiffRocLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    if abs(y[1] - L.ypos) < 1e-6
+        return L.kappa*loss(L.loss2, yhat, y)
+    end
+    return loss(L.loss2, yhat, y)
+end
+
+function derivloss(L::DiffRocLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    if abs(y[1] - L.ypos) < 1e-6
+        return L.kappa*derivloss(L.loss2, yhat, y)
+    end
+    return derivloss(L.loss2, yhat, y)
+end
+
 
 
 ##############################################################################

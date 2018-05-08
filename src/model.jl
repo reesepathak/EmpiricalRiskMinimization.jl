@@ -314,7 +314,7 @@ function train(M::Model; lambda=1e-10, trainfrac=nothing,
     if features != nothing
         setfeatures(M, features)
     end
-    M.D.results = trainx(M, lambda, Xtrain(M), Xtest(M), Ytrain(M), Ytest(M))
+    M.D.results = trainx(M, lambda, Xtrain(M), Xtest(M), Ytrain(M), Ytest(M); kwargs...)
     M.istrained = true
     if M.verbose
         status(M)

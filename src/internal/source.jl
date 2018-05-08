@@ -97,6 +97,11 @@ function embedU(F::FrameSource, U::Array{T,2}) where {T<:Any}
     return Xf.A
 end
 
+function embedV(F::FrameSource, U::Array{T,2}) where {T<:Any}
+    Uf = DFrame(U, F.Vf.names)
+    Xf = applyfmaplist(F.Ymaps, Uf)
+    return Xf.A
+end
 ##############################################################################
 # internal code 
 
