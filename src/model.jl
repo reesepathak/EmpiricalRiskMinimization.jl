@@ -107,13 +107,14 @@ function setregweights(M::Model)
         return
     end
     X = selectfeatures(M, M.X)
-    nf = size(X,2)
-    M.regweights = ones(nf)
-    for i=1:nf
+    d = size(X,2)
+    R = ones(d)
+    for i=1:d
         if var(X[:,i]) == 0
-            M.regweights[i] = 0
+            R[i] = 0
         end
     end
+    M.regweights = R
 end
 
 function defaultembedding(M::Model; stand=true)

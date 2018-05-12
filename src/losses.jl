@@ -23,6 +23,67 @@ function cvxloss(L::SquareLoss,  yhat, y)
     return sumsquares(yhat - y)
 end
 
+##############################################################################
+# multiclass support functions
+
+function margin(pi, pj, y)
+    return (pj-pi)'*y + 0.5*(dot(pi,pi) - dot(pj,pj))
+end
+
+# gradient of margin wrt y
+function dmargin(pi, pj, y)
+    return pj-pi
+end
+
+function findclosest(reps, y)
+    dsqmin = Inf
+    imin = 0
+    for i=1:length(reps)
+        di = dot(y-reps[i], y-reps[i])
+        if di < dsqmin
+            imin = i
+            dsqmin = di
+        end
+    end
+    return imin
+end
+
+########################################
+# multiclass logistic loss
+
+
+struct MultiLogisticLoss <: LossDiff
+    reps  # list of representative points in R^m
+end
+
+
+function loss(L::MultiLogisticLoss, yhat::Array{T,1}, y::Array{Float64,1}) where {T<:Any}
+    # psij = y
+    K = length(L.reps)
+    j = findclosest(L.reps, y)
+    psipsidaggeryhat = L.reps[j]
+    s = 0.0
+    for i=1:K
+        s = s + exp(1-margin(L.reps[i], psipsidaggeryhat, yhat))
+    end
+    return log(s)
+end
+
+
+function derivloss(L::MultiLogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    K = length(L.reps)
+    j = findclosest(L.reps, y)
+    psipsidaggeryhat = L.reps[j]
+    s = 0.0
+    se = 0.0
+    for i=1:K
+        e = exp(1-margin(L.reps[i], psipsidaggeryhat, yhat))
+        se += e
+        s  += e * dmargin(L.reps[i], psipsidaggeryhat, yhat)
+    end
+    return -s/se
+end
+
 #########################################
 # L1 Loss
 #########################################
@@ -192,6 +253,33 @@ function derivloss(L::LogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return -(y.*exp.(-yhat.*y))./(1 + exp.(-yhat.*y))
 end
 
+
+# Hubristic
+
+struct HubristicLoss <: LossDiff
+    alpha
+end
+function loss(L::HubristicLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    s = 0.0
+    for i=1:length(yhat)
+        s += hbr(-y[i]*yhat[i], L.alpha)
+    end
+    return s
+end
+
+function hbr(y, alpha)
+    if y<-1
+        return 0.0
+    end
+    if y<alpha-1
+        return (y+1)^2
+    end
+    return alpha*(2-alpha+2*y)
+end
+
+
+
+
 #########################################
 # Sigmoid Loss 
 #########################################
@@ -234,13 +322,27 @@ end
 ##############################################################################
 # average loss
 
-function loss(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2})
+function loss(L::Loss, Yhat::Array{T,2}, Y::Array{Float64,2}) where {T<:Any}
     if size(Yhat,1) == 0
         return 0
     end
     n = size(Yhat, 1)
     L = sum(loss(L, Yhat[i, :], Y[i, :]) for i in 1:n)
     return (1/n) * L 
+end
+
+
+# gradient of average loss wrt theta
+function derivlosstheta(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2},
+                        X::Array{Float64,2})
+    n,d = size(X)
+    m = size(Y,2)
+    dtheta = zeros(d,m)
+    for i=1:n
+        s = derivloss(L, Yhat[i,:], Y[i,:])
+        dtheta += X[i,:]*s'
+    end
+    return dtheta/n
 end
 
 ############################################################################## 

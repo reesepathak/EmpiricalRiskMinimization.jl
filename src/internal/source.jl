@@ -142,6 +142,9 @@ end
 # appends or replaces if the name exists already
 function appendcol(DF::DFrame, name, u)
     if name != nothing && name in DF.names
+        if size(u,2) > 1
+            println("ERROR: Cannot specify existing destination name if using onehot")
+        end
         j = findvalue(name, DF.names)
         DF.A[:,j] = u
     else
@@ -166,7 +169,8 @@ function uniquecolumnvalues(DF::DFrame, col)
     valtonum = Dict()
     vals = Any[]
     num = 1
-    for val in Set(DF.A[:,j])
+    possiblevalues = sort(collect(Set(DF.A[:,j])))
+    for val in possiblevalues
         valtonum[val] = num
         push!(vals, val)
         num += 1
@@ -231,14 +235,27 @@ mutable struct OneHotFmap<:FeatureMap
     standardize  # true if standardized
     used # if been standardized before
     mean 
-    std 
+    std
+    valtonum  # dict mapping values to numbers
+    vals  # list of the values in order (i.e. a list mapping numbers to values)
 end
 
-OneHotFmap(c,n,s) = OneHotFmap(c,n,s,false,nothing,nothing)
+OneHotFmap(c,n,s) = OneHotFmap(c,n,s,false,nothing,nothing,nothing,nothing)
+
+# one hot does it's own standardization since at the moment
+# each feature added only takes one input column
+# we do not know at the time the feature is added to the list
+# how many possible values its input column will take
+# and so we don't know how many output columns will be generated
+# and so we cannot generate standardizers for each of them
+#
+
 
 function applyfmap(FM::OneHotFmap, uvframe, xyframe)
     srcframe, srccol =  findcolumn(FM.src, uvframe, xyframe)
     valtonum, vals = uniquecolumnvalues(srcframe, srccol)
+    FM.valtonum = valtonum
+    FM.vals = vals
     u = coltoonehot(srcframe, srccol, valtonum)
     if FM.standardize
         if !FM.used
@@ -250,6 +267,29 @@ function applyfmap(FM::OneHotFmap, uvframe, xyframe)
         u = (u - repmat(FM.mean, n, 1))./repmat(FM.std,n,1)
     end
     appendcol(xyframe, FM.dest, u)
+end
+
+
+# map from dest to src
+function invertfmap(FM::OneHotFmap, uvframe, xyframe)
+    # K is number of classes
+    K = length(FM.vals)
+    n = size(xyframe.A, 1)
+    x = Array{Any}(n)
+    destcols = zeros(Int64, K)
+    for k=1:K
+        destcols[k] = findcolumn(FM.dest * "_$(k)", xyframe)
+    end
+    xi = zeros(K)
+    for i=1:n
+        for k=1:K
+            xi[k] = xyframe.A[i,destcols[k]]
+        end
+        maxval, maxind = findmax(xi)
+        x[i] = FM.vals[maxind]
+    end
+    srcframe, srccol = findcolumn(FM.src, uvframe, xyframe)
+    appendcol(srcframe, FM.src, x)
 end
 
 ##############################
@@ -444,6 +484,7 @@ function addfeaturex(fmaps, count, col;
         addfeaturex(fmaps, count, name;
                       etype="standardize", stand=false, name=name, kwargs...)
     end
+        
 end
 
 

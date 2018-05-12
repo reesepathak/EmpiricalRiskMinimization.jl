@@ -15,6 +15,7 @@ mutable struct ProxGradientSolver <: Solver
     verbose
     eps
     max_iters
+    min_iters
     gamma_initial
     thetas
     gammas
@@ -32,8 +33,8 @@ print(io, S::Solver) = print(io, name(S))
 print(io::IO, S::Solver) = print(io, name(S))
 
 
-ProxGradientSolver(;verbose=false, eps=1e-6, maxiters=1000,
-                   gamma_initial=0.1) = ProxGradientSolver(verbose, eps, maxiters,
+ProxGradientSolver(;verbose=false, eps=1e-6, maxiters=1000, miniters=1,
+                   gamma_initial=0.1) = ProxGradientSolver(verbose, eps, maxiters, miniters,
                                                            gamma_initial, nothing, nothing,
                                                            nothing, nothing, nothing)
 
@@ -112,9 +113,10 @@ end
 
 function lsreg(X, Y, lambda, regweights)
     d = size(X,2)
+    m = size(Y,2)
     A = sqrt(lambda) * diagm(sqrt.(regweights))
     Xh = [X; A]
-    Yh = [Y; zeros(d)]
+    Yh = [Y; zeros(d,m)]
     theta = ls(Xh,Yh)
 end
 ##############################################################################
@@ -133,29 +135,26 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
    
     d = size(X,2)
     n = size(X,1)
-   
+    m = size(Y,2)
+
     # useful stuff
     # f = loss(theta)
     # g = sum(regparam*regweights*reg(theta))
     #
     # so we minimize f + g
-    f(theta) = loss(L, matrix(X*theta), Y)
-    gradf(theta) = dloss(L, matrix(X*theta), Y)
-    g(theta) = reg(R, regparam*regweights, theta[:])
-    proxg(gamma, v) = prox(R, gamma, regparam*regweights, v)
+    #
+    # reshape to deal with matrix case
+    #
+    R1 = repmat(regweights, 1,m)
+    rw = regparam*R1[:]
+    f(theta) = loss(L, X*reshape(theta,d,m) , Y)
+    gradf(theta) = derivlosstheta(L, X*reshape(theta,d,m), Y, X)[:]
+    g(theta) = reg(R, rw, theta[:])
+    proxg(gamma, v) = prox(R, gamma, rw, v)
 
     
-    function dloss(L, Yhat, Y)
-        dtheta = zeros(d)
-        for i=1:n
-            s = derivloss(L, Yhat[i,:], Y[i,:])[1]
-            dtheta += s*X[i,:]
-        end
-        return dtheta/n
-    end
-
-    theta =  proxgradient(d, f, gradf, g, proxg, S; theta_guess = theta_guess)
-    return matrix(theta)
+    theta =  proxgradient(d*m, f, gradf, g, proxg, S; theta_guess = theta_guess)
+    return reshape(theta,d,m)
 end
 
 # generic solver will work for any f and g
@@ -163,6 +162,7 @@ end
 function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
 
     max_iters = S.max_iters
+    min_iters = S.min_iters
     verbose = S.verbose
     eps = S.eps
     gamma_initial = S.gamma_initial
@@ -202,12 +202,15 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
         theta = thetas[:,k]
         fg = fs[k] + gs[k]
 
+
         # printing
         if verbose
             @printf("%d   gamma: %f   loss: %f   reg: %f \n", k, gamma, f(theta), g(theta))
         end
 
         gradfs[:,k] = gradf(theta)
+        #println("fg = ", fg)
+        #println("gradfs = ", gradfs[:,k])
 
         # line search
         while true
@@ -215,6 +218,8 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
             theta_next = proxg(gamma, v)
             f_next = f(theta_next) 
             g_next = g(theta_next)
+            #println("f_next = ", f_next)
+            #println("g_next = ", g_next)
 
             # should be <= not < else can get stuck if g is an indicator function
             if f_next + g_next <= fg
@@ -233,7 +238,7 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
         gs[k+1] = g_next
         
         # stopping criterion
-        if fg - (f_next + g_next) < eps
+        if k > min_iters && fg - (f_next + g_next) < eps
             break
         end
 
