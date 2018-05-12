@@ -464,6 +464,8 @@ function getfeature(col; name = nothing, etype="number",
         return StandardizeFmap(col, name)
     elseif etype == "product"
         return FunctionListFmap(col, name, (x,y)-> x*y)
+    elseif etype == "functionlist"
+        return FunctionListFmap(col, name, f)
     elseif etype == "one"
         return OneFmap(name)
     end

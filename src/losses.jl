@@ -27,7 +27,7 @@ end
 # multiclass support functions
 
 function margin(pi, pj, y)
-    return (pj-pi)'*y + 0.5*(dot(pi,pi) - dot(pj,pj))
+    return dot(pj-pi,y) + 0.5*(dot(pi,pi) - dot(pj,pj))
 end
 
 # gradient of margin wrt y
@@ -48,6 +48,46 @@ function findclosest(reps, y)
     return imin
 end
 
+##############################################################################
+# multiclass hinge loss
+
+
+struct MultiHingeLoss <: LossNonDiff
+    reps  # list of representative points in R^m
+end
+
+
+function loss(L::MultiHingeLoss, yhat::Array{T,1}, y::Array{Float64,1}) where {T<:Any}
+    # psij = y
+    K = length(L.reps)
+    j = findclosest(L.reps, y)
+    yrep = L.reps[j]
+    s = zeros(K)
+    for i=1:K
+        if i != j
+            s[i] = max(1-margin(L.reps[i], yrep, yhat), 0)
+        else
+            s[i] = -Inf
+        end
+    end
+    return maximum(s)
+end
+
+function cvxloss(L::MultiHingeLoss, yhat, y)
+    K = length(L.reps)
+    j = findclosest(L.reps, y)
+    yrep = L.reps[j]
+    s = 0
+    for i=1:K
+        if i != j
+            m = margin(L.reps[i], yrep, yhat)
+            s = max(1-m, s)
+        end
+    end
+    return s
+end
+
+
 ########################################
 # multiclass logistic loss
 
@@ -61,10 +101,10 @@ function loss(L::MultiLogisticLoss, yhat::Array{T,1}, y::Array{Float64,1}) where
     # psij = y
     K = length(L.reps)
     j = findclosest(L.reps, y)
-    psipsidaggeryhat = L.reps[j]
+    yrep = L.reps[j]
     s = 0.0
     for i=1:K
-        s = s + exp(1-margin(L.reps[i], psipsidaggeryhat, yhat))
+        s = s + exp(1-margin(L.reps[i], yrep, yhat))
     end
     return log(s)
 end
@@ -73,13 +113,13 @@ end
 function derivloss(L::MultiLogisticLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     K = length(L.reps)
     j = findclosest(L.reps, y)
-    psipsidaggeryhat = L.reps[j]
+    yrep = L.reps[j]
     s = 0.0
     se = 0.0
     for i=1:K
-        e = exp(1-margin(L.reps[i], psipsidaggeryhat, yhat))
+        e = exp(1-margin(L.reps[i], yrep, yhat))
         se += e
-        s  += e * dmargin(L.reps[i], psipsidaggeryhat, yhat)
+        s  += e * dmargin(L.reps[i], yrep, yhat)
     end
     return -s/se
 end

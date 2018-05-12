@@ -61,14 +61,15 @@ getsolver(L::LossDiff, R::SqrtReg) = ProxGradientSolver()
 function solve(S::CvxSolver, L, R, regweights, X, Y, lambda;
                   theta_guess=nothing)
     n,d = size(X)
-    theta = Convex.Variable(d)
+    m = size(Y,2)
+    theta = Convex.Variable(d,m)
     # we shouldn't need to specify Positive here, but
     # Convex.jl is unreliable without it
     losses = Convex.Variable(n, Positive())
-    regs = Convex.Variable(d, Positive())
+    regs = Convex.Variable(d, m, Positive())
     problem = Convex.minimize( sum(losses)/n  + sum(regs))
     for i=1:n
-        problem.constraints +=    losses[i] >= cvxloss(L, X[i,:]'*theta,  Y[i])
+        problem.constraints +=    losses[i] >= cvxloss(L, theta'*X[i,:],  Y[i,:])
     end
     if isa(R, NonnegReg)
         for i=1:d
@@ -79,10 +80,13 @@ function solve(S::CvxSolver, L, R, regweights, X, Y, lambda;
         end
     else
         for i=1:d
-            problem.constraints +=    regs[i]   >= lambda * regweights[i] * cvxreg(R, theta[i])
+            for j=1:m
+                problem.constraints +=    regs[i]   >= lambda * regweights[i] * cvxreg(R, theta[i,j])
+            end
         end
     end
     solve!(problem, SCSSolver(verbose=S.verbose, eps=S.eps))
+    println("theta.value = ", theta.value)
     return theta.value
 end
 
