@@ -37,6 +37,16 @@ is a regularized least squares regression model with regularization on the non-c
 ### Specifying different models
 
 ## Training
+To train a model in `ERM`, you simply invoke the the `train` command.
+
+There are additional (hidden) parameters available to fine tune the training experience.
+
+In the example below, we adjust the regularization weight (default: `1e-10`) and the
+fraction of data used for training (default: `.60`).
+```julia
+train(M, lambda=1e-4, trainfrac=0.6)
+```
 
 ## Status
-
+After carrying out an `ERM` function (e.g., `train`) on a model `M`,
+you can invoke `status(M)` to view the outcome of the function.

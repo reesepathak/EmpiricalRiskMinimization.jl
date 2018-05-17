@@ -5,7 +5,7 @@ Some loss functions (e.g., `HuberLoss`) accept parameters.
 
 ## Mathematical definitions
 
-|       name   |     ERM `Loss`     | mathematical definition                                                         |  notes         |
+|       name   |     ERM `Loss`     | mathematical definition  (assuming scalar targets)                 |  notes         |
 | -----------  | :-----------------:| :-----------------------------------------------------------------------------: | :-------------:|
 | squared      |  `SquareLoss()`    | $l^{\mathrm{sqr}}(\widehat{y}, y) = (\widehat{y} - y)^2$                        | n/a            |
 | absolute     |  `AbsoluteLoss()`  | $l^{\mathrm{abs}}(\widehat y, y) =  \|\widehat y - y\|$                                  | n/a            |
@@ -14,8 +14,8 @@ Some loss functions (e.g., `HuberLoss`) accept parameters.
 | Huber        |  `HuberLoss()`     | $l^{\mathrm{hub}}(\widehat y, y) = \begin{cases} (\widehat{y} - y)^2 & \|\widehat{y} - y\| \leq \alpha \\\\ \alpha(2\|\widehat{y}\| - \alpha) & \|\widehat{y} - y\| > \alpha \end{cases}$ | $\alpha \geq 0$  |
 | log Huber    |  `LogHuberLoss()`  | $l^{\mathrm{dh}}(\widehat y, y) = \begin{cases} (\widehat{y} - y)^2 & \|\widehat{y} - y\| \leq \alpha \\\\ \alpha^2(1 + 2(\log(\widehat{y} - y) - \log(\alpha))) & \|\widehat{y} - y\| > \alpha \end{cases}$ | $\alpha \geq 0$  |
 | hinge        |  `HingeLoss()`     | $l^{\mathrm{hng}}(\widehat y, y) = \max(1 - \widehat{y} y, 0)$ |  n/a         |
-| logistic     |  `LogisticLoss()`  | $l^{\mathrm{lgt}}(\widehat y, y) = $                    |       n/a    |
-| sigmoid      |  `SigmoidLoss()`   | $l^{\mathrm{sigm}}(\widehat y, y) = $                  |         n/a  |
+| logistic     |  `LogisticLoss()`  | $l^{\mathrm{lgt}}(\widehat y, y) = \log(1 + \exp(-\widehat y y)$ |     n/a    |
+| sigmoid      |  `SigmoidLoss()`   | $l^{\mathrm{sigm}}(\widehat y, y) = 1/(1 + \exp(\widehat y y))$                  |         n/a  |
 
 A good reference for loss functions are the [EE104](http://ee104.stanford.edu) lecture slides. In particular, the
 [lecture on non-quadratic losses](http://ee104.stanford.edu/lectures/losses.pdf) is helpful.

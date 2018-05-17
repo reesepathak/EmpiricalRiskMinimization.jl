@@ -1,7 +1,6 @@
 # [Regularizers](@id usage_regularizers)
 
-Below we enumerate the regularizers implemented by ERM, and provide their mathematical definition. See the
-[validation page](@ref usage_regpath) for information about regularization paths.
+Below we enumerate the regularizers implemented by ERM, and provide their mathematical definition. 
 
 ## Mathematical definitions
 
