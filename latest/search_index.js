@@ -117,7 +117,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Models and training",
     "title": "Training",
     "category": "section",
-    "text": ""
+    "text": "To train a model in ERM, you simply invoke the the train command.There are additional (hidden) parameters available to fine tune the training experience.In the example below, we adjust the regularization weight (default: 1e-10) and the fraction of data used for training (default: .60).train(M, lambda=1e-4, trainfrac=0.6)"
 },
 
 {
@@ -125,7 +125,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Models and training",
     "title": "Status",
     "category": "section",
-    "text": ""
+    "text": "After carrying out an ERM function (e.g., train) on a model M, you can invoke status(M) to view the outcome of the function."
 },
 
 {
@@ -149,7 +149,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Losses",
     "title": "Mathematical definitions",
     "category": "section",
-    "text": "name ERM Loss mathematical definition notes\nsquared SquareLoss() l^mathrmsqr(widehaty y) = (widehaty - y)^2 n/a\nabsolute AbsoluteLoss() l^mathrmabs(widehat y y) =  widehat y - y n/a\ntilted TiltedLoss() l^mathrmtlt(widehat y y) = tau(widehat y - y)_+ + (1 - tau)(widehat y - y)_- 0  tau  1\ndeadzone DeadzoneLoss() l^mathrmdz(widehat y y) = max(widehat y - y - alpha 0) alpha geq 0\nHuber HuberLoss() l^mathrmhub(widehat y y) = begincases (widehaty - y)^2  widehaty - y leq alpha  alpha(2widehaty - alpha)  widehaty - y  alpha endcases alpha geq 0\nlog Huber LogHuberLoss() l^mathrmdh(widehat y y) = begincases (widehaty - y)^2  widehaty - y leq alpha  alpha^2(1 + 2(log(widehaty - y) - log(alpha)))  widehaty - y  alpha endcases alpha geq 0\nhinge HingeLoss() l^mathrmhng(widehat y y) = max(1 - widehaty y 0) n/a\nlogistic LogisticLoss() $l^{\\mathrm{lgt}}(\\widehat y, y) = $ n/a\nsigmoid SigmoidLoss() $l^{\\mathrm{sigm}}(\\widehat y, y) = $ n/aA good reference for loss functions are the EE104 lecture slides. In particular, the lecture on non-quadratic losses is helpful."
+    "text": "name ERM Loss mathematical definition  (assuming scalar targets) notes\nsquared SquareLoss() l^mathrmsqr(widehaty y) = (widehaty - y)^2 n/a\nabsolute AbsoluteLoss() l^mathrmabs(widehat y y) =  widehat y - y n/a\ntilted TiltedLoss() l^mathrmtlt(widehat y y) = tau(widehat y - y)_+ + (1 - tau)(widehat y - y)_- 0  tau  1\ndeadzone DeadzoneLoss() l^mathrmdz(widehat y y) = max(widehat y - y - alpha 0) alpha geq 0\nHuber HuberLoss() l^mathrmhub(widehat y y) = begincases (widehaty - y)^2  widehaty - y leq alpha  alpha(2widehaty - alpha)  widehaty - y  alpha endcases alpha geq 0\nlog Huber LogHuberLoss() l^mathrmdh(widehat y y) = begincases (widehaty - y)^2  widehaty - y leq alpha  alpha^2(1 + 2(log(widehaty - y) - log(alpha)))  widehaty - y  alpha endcases alpha geq 0\nhinge HingeLoss() l^mathrmhng(widehat y y) = max(1 - widehaty y 0) n/a\nlogistic LogisticLoss() l^mathrmlgt(widehat y y) = log(1 + exp(-widehat y y) n/a\nsigmoid SigmoidLoss() l^mathrmsigm(widehat y y) = 1(1 + exp(widehat y y)) n/aA good reference for loss functions are the EE104 lecture slides. In particular, the lecture on non-quadratic losses is helpful."
 },
 
 {
@@ -173,7 +173,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Regularizers",
     "title": "Regularizers",
     "category": "section",
-    "text": "Below we enumerate the regularizers implemented by ERM, and provide their mathematical definition. See the validation page for information about regularization paths."
+    "text": "Below we enumerate the regularizers implemented by ERM, and provide their mathematical definition. "
 },
 
 {
@@ -201,27 +201,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "usage/validation.html#Validation-on-a-single-test-set-1",
+    "location": "usage/validation.html#Recovering-losses-and-optimal-parameters-1",
     "page": "Validation and out-of-sample testing",
-    "title": "Validation on a single test set",
+    "title": "Recovering losses and optimal parameters",
     "category": "section",
-    "text": ""
-},
-
-{
-    "location": "usage/validation.html#Cross-fold-validation-1",
-    "page": "Validation and out-of-sample testing",
-    "title": "Cross-fold validation",
-    "category": "section",
-    "text": ""
-},
-
-{
-    "location": "usage/validation.html#usage_regpath-1",
-    "page": "Validation and out-of-sample testing",
-    "title": "Regularization paths",
-    "category": "section",
-    "text": ""
+    "text": "To view the train and test loss on a particular model M, you simply invoke trainloss and testloss on the model.To get the optimal theta and lambda recovered from training, you use thetaopt(M) and lambdaopt(M). To recover the list of lambda values used for a regularization path, you simply use lambdapath(M). Similarly, the optimal thetas are found via thetapath(M), and you can find the corresponding training and test losses through trainloss(M) and testloss(M), respectively. "
 },
 
 {
@@ -237,7 +221,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Prediction",
     "title": "Prediction",
     "category": "section",
-    "text": ""
+    "text": "After training and validating a model, we often want to use models on unseen data. In this page, we describe the prediction functions available in ERM."
 },
 
 {
@@ -245,15 +229,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Prediction",
     "title": "Using a trained model on new data",
     "category": "section",
-    "text": ""
-},
-
-{
-    "location": "usage/prediction.html#Recovering-losses-1",
-    "page": "Prediction",
-    "title": "Recovering losses",
-    "category": "section",
-    "text": ""
+    "text": "The most basic way to do prediction is to use predict.predict(M, x)\n````\nThe code above takes as input a model `M` and data point `x`, from which a prediction is\nformed according to the model\'s parameters. You can also input a different choice of `theta`,\nas in `predict(M, x, theta)`. By default, it is set to the optimal `theta` stored in `M`.\n\nOf course, in many settings you may want to predict on a certain set of data.\n\nFor example the following two lines of code will allow you to compute predictions on the training\nset. julia predict_y_from_train(M) predict_v_from_train(M)These functions allow you to compute embedded and unembedded predictions (corresponding to `y` and `v`, respectively) on the\ntrain set of `M`.\njulia predict_y_from_test(M) predict_v_from_test(M)These functions allow you to compute embedded and unembedded predictions (corresponding to `y` and `v`, respectively) on the\ntest set of `M`.\n\nAdditionally, if you would rather provide a single raw input `u`, we provide all the prediction functions\nyou could ever want. julia predict_y_from_u(M) predict_v_from_u(M)\n## Recovering losses\n\nYou can compute the train and test losses using `trainloss(M)` and `testloss(M)`, respectively. \n\nYou often also want to compute a confusion matrix when solving classification problems.julia confusion_train(M) confusion_test(M) ``These two functions compute confusion matrices on the train and test sets (respectively) forM`."
 },
 
 {
