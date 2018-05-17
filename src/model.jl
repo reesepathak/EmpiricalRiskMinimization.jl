@@ -22,27 +22,44 @@ mutable struct Model
     verbose::Bool
     xydataisinvalid::Bool
     disinvalid::Bool
+    Uestnumcols
+    Vestnumcols
 end
 
-function Model(S::DataSource, loss, reg, verbose)
-    M =  Model(NoData(), loss, reg, DefaultSolver(), S,
+# function Model(S::DataSource, loss, reg, verbose; Uestnumcols=0, Vestnumcols=0)
+#     M =  Model(NoData(), loss, reg, DefaultSolver(), S,
+#                nothing, nothing, #X,Y
+#                "all", # featurelist
+#                nothing, #regweights
+#                false, #istrained
+#                verbose, #verbose
+#                true, # xydataisinvalid
+#                true,  # disinvalid
+#                Uestnumcols, Vestnumcols,0
+#                )
+#     setdata(M)
+#     return M
+# end
+
+function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
+               Unames = nothing, Vnames = nothing,
+               embedall = false, verbose=false,
+               Uestnumcols = 0, Vestnumcols=0, kwargs...)
+    S = makeFrameSource(U, V, Unames, Vnames; kwargs...)
+    M =  Model(NoData(),
+               loss,
+               reg,
+               DefaultSolver(),
+               S,
                nothing, nothing, #X,Y
                "all", # featurelist
                nothing, #regweights
                false, #istrained
                verbose, #verbose
                true, # xydataisinvalid
-               true  # disinvalid 
-               )
+               true,  # disinvalid
+               Uestnumcols, Vestnumcols)
     setdata(M)
-    return M
-end
-
-function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
-               Unames = nothing, Vnames = nothing,
-               embedall = false, verbose=false, kwargs...)
-    S = makeFrameSource(U, V, Unames, Vnames)
-    M = Model(S, loss, reg, verbose)
     if embedall
         if M.verbose
             println("Model: applying default embedding")
@@ -97,7 +114,7 @@ function splitrows(n, trainfrac::Number; splitmethod=0)
 end
 
 function setdata(M::Model)
-    M.X, M.Y  = getXY(M.S)
+    M.X, M.Y  = getXY(M.S; Uestnumcols = M.Uestnumcols, Vestnumcols = M.Vestnumcols)
     M.xydataisinvalid = false
     setregweights(M)
 end
@@ -111,7 +128,9 @@ function setregweights(M::Model)
     R = ones(d)
     for i=1:d
         if var(X[:,i]) == 0
-            R[i] = 0
+            if norm(X[:,i]) != 0
+                R[i] = 0
+            end
         end
     end
     M.regweights = R
@@ -242,6 +261,9 @@ function trainpathx(M::Model, lambda::Array; quiet=true, kwargs...)
         else
             tg = nothing
         end
+        if M.verbose
+            println("lambda = ", lambda[i])
+        end
         results[i] = trainx(M, lambda[i], Xtrain(M), Xtest(M), Ytrain(M), Ytest(M);
                             theta_guess = tg)
     end
@@ -368,7 +390,7 @@ end
 
 getU(M::Model) = getU(M.S)
 getV(M::Model) = getV(M.S)
-getXY(M::Model) = getXY(M.S)
+#getXY(M::Model) = getXY(M.S)
 
 
 Xtest(M::Model) = selectfeatures(M, Xtest(M.D))

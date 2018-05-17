@@ -371,6 +371,13 @@ function loss(L::Loss, Yhat::Array{T,2}, Y::Array{Float64,2}) where {T<:Any}
     return (1/n) * L 
 end
 
+function addup(dtheta,X,s,i,d,m)
+    for pi=1:d
+        for pj=1:m
+            dtheta[pi,pj] += X[i,pi]*s[pj]
+        end
+    end
+end
 
 # gradient of average loss wrt theta
 function derivlosstheta(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2},
@@ -378,9 +385,10 @@ function derivlosstheta(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2},
     n,d = size(X)
     m = size(Y,2)
     dtheta = zeros(d,m)
-    for i=1:n
+    for i in 1:n
         s = derivloss(L, Yhat[i,:], Y[i,:])
-        dtheta += X[i,:]*s'
+        #dtheta += X[i,:]*s'
+        addup(dtheta,X,s,i,d,m)
     end
     return dtheta/n
 end

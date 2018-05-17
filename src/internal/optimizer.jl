@@ -22,6 +22,7 @@ mutable struct ProxGradientSolver <: Solver
     gradfs
     fs
     gs
+    progress
 end
 
 name(S::ProxGradientSolver) = "ProxGradientSolver"
@@ -33,10 +34,10 @@ print(io, S::Solver) = print(io, name(S))
 print(io::IO, S::Solver) = print(io, name(S))
 
 
-ProxGradientSolver(;verbose=false, eps=1e-6, maxiters=1000, miniters=1,
-                   gamma_initial=0.1) = ProxGradientSolver(verbose, eps, maxiters, miniters,
+ProxGradientSolver(;verbose=false, eps=1e-6, maxiters=1000, miniters=1, 
+                   gamma_initial=0.1, progress=nothing) = ProxGradientSolver(verbose, eps, maxiters, miniters,
                                                            gamma_initial, nothing, nothing,
-                                                           nothing, nothing, nothing)
+                                                           nothing, nothing, nothing, progress)
 
 CvxSolver(;verbose=false, eps=1e-5) = CvxSolver(verbose, eps)
 
@@ -156,8 +157,12 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
     g(theta) = reg(R, rw, theta[:])
     proxg(gamma, v) = prox(R, gamma, rw, v)
 
+    tg = theta_guess
+    if tg != nothing
+        tg = tg[:]
+    end
     
-    theta =  proxgradient(d*m, f, gradf, g, proxg, S; theta_guess = theta_guess)
+    theta =  proxgradient(d*m, f, gradf, g, proxg, S; theta_guess = tg)
     return reshape(theta,d,m)
 end
 
@@ -240,7 +245,10 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
         gammas[k+1] = gamma_next
         fs[k+1] = f_next
         gs[k+1] = g_next
-        
+
+        if S.progress != nothing
+            S.progress(k+1,theta_next)
+        end
         # stopping criterion
         if k > min_iters && fg - (f_next + g_next) < eps
             break

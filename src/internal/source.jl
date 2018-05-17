@@ -7,13 +7,14 @@
 mutable struct DFrame
     A
     names
+    cols
 end
 
 # empty frame
-function DFrame(numrows::Integer)
-    A =  Array{Float64}(numrows,0)
+function DFrame(numrows::Integer; estnumcols=0)
+    A =  Array{Float64}(numrows,estnumcols)
     names = Any[]
-    return DFrame(A,names)
+    return DFrame(A,names,0)
 end
 
 # frame with no names
@@ -21,14 +22,44 @@ function DFrame(A)
     d = size(A,2)
     names = Array{Any}(d)
     fill!(names, "")
-    return DFrame(A,names)
+    return DFrame(A,names,d)
 end
 
+function DFrame(A, names)
+    return DFrame(A, names, size(A,2))
+end
 
 findcolumn(c::String, DF::DFrame) = findvalue(c, DF.names)
 findcolumn(c::Number, DF::DFrame) = c
 
+function addcolumn(DF::DFrame, u::Array{Float64,2})
+    newcols = size(u,2)
+    if DF.cols + newcols < size(DF.A,2)
+        DF.A[:,DF.cols+1:DF.cols+newcols] = u
+        DF.cols += newcols
+        return
+    end
+    DF.A = [DF.A u]
+    DF.cols += newcols
+end
 
+addcolumn(DF::DFrame, u::Array{Float64,1}) = addcolumn(DF, reshape(u, length(u),1))
+
+
+import Base.size
+function size(DF::DFrame, x::Number)
+    if x == 1
+        return size(DF.A,1)
+    end
+    return DF.cols
+end
+
+function size(DF::DFrame)
+    return size(DF.A,1), DF.cols
+end
+function value(DF::DFrame)
+    return DF.A[:,1:DF.cols]
+end
 
 ##############################################################################
 
@@ -69,11 +100,11 @@ end
 
 
 
-function getXY(F::FrameSource)
-    Xf = applyfmaplist(F.Xmaps, F.Uf)
-    Yf = applyfmaplist(F.Ymaps, F.Vf)
-    X = Xf.A
-    Y = Yf.A
+function getXY(F::FrameSource; Uestnumcols=0, Vestnumcols=0)
+    Xf = applyfmaplist(F.Xmaps, F.Uf; estnumcols = Uestnumcols)
+    Yf = applyfmaplist(F.Ymaps, F.Vf; estnumcols = Vestnumcols)
+    X = value(Xf)
+    Y = value(Yf)
     F.Xnames = Xf.names
     F.Ynames = Yf.names
     return X, Y
@@ -81,8 +112,8 @@ end
 
 
 
-getU(F::FrameSource) = F.Uf.A
-getV(F::FrameSource) = F.Vf.A
+getU(F::FrameSource) = value(F.Uf)
+getV(F::FrameSource) = value(F.Vf)
 
 # embed one data record
 function embedU(F::FrameSource, u::Array{T,1}) where {T<:Any}
@@ -94,13 +125,13 @@ end
 function embedU(F::FrameSource, U::Array{T,2}) where {T<:Any}
     Uf = DFrame(U, F.Uf.names)
     Xf = applyfmaplist(F.Xmaps, Uf)
-    return Xf.A
+    return value(Xf)
 end
 
 function embedV(F::FrameSource, U::Array{T,2}) where {T<:Any}
     Uf = DFrame(U, F.Vf.names)
     Xf = applyfmaplist(F.Ymaps, Uf)
-    return Xf.A
+    return value(Xf)
 end
 ##############################################################################
 # internal code 
@@ -127,13 +158,15 @@ end
 
 function columnvalues(DF::DFrame, col)
     j = findcolumn(col, DF)
-    n = size(DF.A, 1)
+    n = size(DF, 1)
     u = zeros(n)
     for i=1:n
         u[i] = number(DF.A[i,j])
     end
     return u
 end
+
+
 
 function appendcol(DF::DFrame, name::Int, u)
     DF.A[:,name] = u
@@ -148,7 +181,7 @@ function appendcol(DF::DFrame, name, u)
         j = findvalue(name, DF.names)
         DF.A[:,j] = u
     else
-        DF.A = [DF.A u]
+        addcolumn(DF, u)
         if size(u,2) == 1
             push!(DF.names, name)
         else
@@ -165,7 +198,7 @@ end
 # and a list of values in order
 function uniquecolumnvalues(DF::DFrame, col)
     j = findcolumn(col, DF)
-    n = size(DF.A, 1)
+    n = size(DF, 1)
     valtonum = Dict()
     vals = Any[]
     num = 1
@@ -181,7 +214,7 @@ end
 # map a column according to valtonum
 function columntointegers(DF::DFrame, col, valtonum)
     j = findcolumn(col, DF)
-    n = size(DF.A, 1)
+    n = size(DF,1)
     u = zeros(n)
     for i=1:n
         u[i] = valtonum[DF.A[i,j]]
@@ -192,7 +225,7 @@ end
 # valtonum is a dict mapping strings to 1...d
 function coltoonehot(DF::DFrame, col, valtonum)
     j = findcolumn(col, DF)
-    n = size(DF.A, 1)
+    n = size(DF,1)
     d = length(valtonum)
     u = zeros(n,d)
     for i=1:n
@@ -274,7 +307,7 @@ end
 function invertfmap(FM::OneHotFmap, uvframe, xyframe)
     # K is number of classes
     K = length(FM.vals)
-    n = size(xyframe.A, 1)
+    n = size(xyframe, 1)
     x = Array{Any}(n)
     destcols = zeros(Int64, K)
     for k=1:K
@@ -327,7 +360,7 @@ function invertfmap(FM::OrdinalFmap, uvframe, xyframe)
                 closestcat = j
             end
         end
-        u[i]  = closestcat
+        u[i]  = FM.categories[closestcat]
     end
     srcframe, srccol = findcolumn(FM.src, uvframe, xyframe)
     appendcol(srcframe, FM.src, u)
@@ -398,6 +431,18 @@ function applyfmap(FM::FunctionListFmap, uvframe, xyframe)
     appendcol(xyframe, FM.dest, unew)
 end
 
+########################################################
+mutable struct UfunctionFmap<:FeatureMap
+    dest # destination name, may be nothing
+    f
+end
+
+function applyfmap(FM::UfunctionFmap, uvframe, xyframe)
+    n = size(uvframe, 1)
+    unew  = FM.f(uvframe.A)
+    appendcol(xyframe, FM.dest, unew)
+end
+
 ##############################
 
 mutable struct StandardizeFmap<:FeatureMap
@@ -414,6 +459,9 @@ function applyfmap(FM::StandardizeFmap, uvframe, xyframe)
     if !FM.used
         FM.mean = mean(u)
         FM.std = std(u)
+        if FM.std<1e-2
+            FM.std=1
+        end
         FM.used = true
     end
     unew = (u - FM.mean)/FM.std
@@ -440,7 +488,7 @@ mutable struct OneFmap<:FeatureMap
 end
 
 function applyfmap(FM::OneFmap, uvframe, xyframe)
-    n = size(uvframe.A, 1)
+    n = size(uvframe, 1)
     u = ones(n)
     appendcol(xyframe, FM.dest, u)
 end
@@ -466,6 +514,8 @@ function getfeature(col; name = nothing, etype="number",
         return FunctionListFmap(col, name, (x,y)-> x*y)
     elseif etype == "functionlist"
         return FunctionListFmap(col, name, f)
+    elseif etype == "ufunction"
+        return UfunctionFmap(name, f)
     elseif etype == "one"
         return OneFmap(name)
     end
@@ -500,9 +550,9 @@ end
 
 
 
-function applyfmaplist(fmaps, uvframe)
-    n = size(uvframe.A,1)
-    xyframe = DFrame(n)
+function applyfmaplist(fmaps, uvframe; estnumcols=0)
+    n = size(uvframe,1)
+    xyframe = DFrame(n; estnumcols=estnumcols)
     ne = length(fmaps)
     for i=1:ne
         applyfmap(fmaps[i], uvframe, xyframe)
@@ -517,16 +567,16 @@ end
 
 function unembedY(F::FrameSource, Y::Array{Float64,2})
     Yf = DFrame(Y, F.Ynames)
-    d = size(F.Vf.A,2)
+    d = size(F.Vf, 2)
     n = size(Y,1)
     Vf = DFrame(zeros(n,d), F.Vf.names)
     invertfmaplist(F.Ymaps, Yf, Vf)
-    V = Vf.A
+    V = value(Vf)
     return V
 end
 
 function invertfmaplist(fmaps, xyframe, uvframe)
-    n = size(xyframe.A,1)
+    n = size(xyframe, 1)
     ne = length(fmaps)
     for i=ne:-1:1
         invertfmap(fmaps[i], uvframe, xyframe)

@@ -58,14 +58,33 @@ predict_v_from_u(M::Model, u::Array{T,1}, theta=thetaopt(M)) where {T<:Any} =  u
 predict_v_from_u(M::Model, U::Array{T,2}, theta=thetaopt(M)) where {T<:Any} =  rowwise(u -> predict_v_from_u(M, u, theta), U)
 
 
+function uniquevalues(x::Array{T,1}) where {T<:Any}
+    n = length(x)
+    valtonum = Dict()
+    vals = Any[]
+    num = 1
+    possiblevalues = sort(collect(Set(x)))
+    for val in possiblevalues
+        valtonum[val] = num
+        push!(vals, val)
+        num += 1
+    end
+    return valtonum, vals
+end
+
+uniquevalues(x::Array{T,2}) where {T<:Any} = uniquevalues(x[:])
+ 
+
+
 function confusionx(vhat, v)
     K = length(Set(v))
     C = zeros(K,K)
     n = size(v,1)
+    valtonum, vals = uniquevalues(v)
     for k=1:n
         i = convert(Int64, vhat[k])
         j = convert(Int64, v[k])
-        C[i,j] += 1
+        C[valtonum[i], valtonum[j]] += 1
     end
     return C
 end
