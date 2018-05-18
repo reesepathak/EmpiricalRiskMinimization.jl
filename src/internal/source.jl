@@ -530,7 +530,7 @@ function addfeaturex(fmaps, count, col;
     end
     fe = getfeature(col; name=name, etype=etype, kwargs...)
     push!(fmaps, fe)
-    if stand && etype != "onehot" && etype != "one" && etype != "onehotstd"
+    if stand && etype != "onehot" && etype != "one" && etype != "onehotstd" && etype != "ufunction"
         # add a featurizer that replaces the feature with
         # with a standardized version that has the same name
         addfeaturex(fmaps, count, name;

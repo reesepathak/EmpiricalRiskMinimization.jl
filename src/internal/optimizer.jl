@@ -23,6 +23,7 @@ mutable struct ProxGradientSolver <: Solver
     fs
     gs
     progress
+    stochastic
 end
 
 name(S::ProxGradientSolver) = "ProxGradientSolver"
@@ -34,10 +35,13 @@ print(io, S::Solver) = print(io, name(S))
 print(io::IO, S::Solver) = print(io, name(S))
 
 
-ProxGradientSolver(;verbose=false, eps=1e-6, maxiters=1000, miniters=1, 
-                   gamma_initial=0.1, progress=nothing) = ProxGradientSolver(verbose, eps, maxiters, miniters,
-                                                           gamma_initial, nothing, nothing,
-                                                           nothing, nothing, nothing, progress)
+ProxGradientSolver(;verbose=false, eps=1e-6,
+                   maxiters=1000, miniters=1, 
+                   gamma_initial=0.1,
+                   progress=nothing, stochastic=false) = ProxGradientSolver(verbose, eps, maxiters, miniters,
+                                                                            gamma_initial, nothing, nothing,
+                                                                            nothing, nothing, nothing, progress,
+                                                                            stochastic)
 
 CvxSolver(;verbose=false, eps=1e-5) = CvxSolver(verbose, eps)
 
@@ -136,8 +140,6 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
                regweights, X, Y, regparam; theta_guess = nothing)
 
     # assume Y is n by 1
-
-   
     d = size(X,2)
     n = size(X,1)
     m = size(Y,2)
@@ -153,7 +155,7 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
     R1 = repmat(regweights, 1,m)
     rw = regparam*R1[:]
     f(theta) = loss(L, X*reshape(theta,d,m) , Y)
-    gradf(theta) = derivlosstheta(L, X*reshape(theta,d,m), Y, X)[:]
+    gradf(theta) = derivlosstheta(L, X*reshape(theta,d,m), Y, X, S.stochastic)[:]
     g(theta) = reg(R, rw, theta[:])
     proxg(gamma, v) = prox(R, gamma, rw, v)
 
@@ -218,28 +220,36 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
         end
 
         gradfs[:,k] = gradf(theta)
-        #println("fg = ", fg)
-        #println("gradfs = ", gradfs[:,k])
 
-        # line search
-        while true
+        if S.stochastic
             v = theta - gradfs[:,k]/(2*gamma)
             theta_next = proxg(gamma, v)
             f_next = f(theta_next) 
             g_next = g(theta_next)
-            #println("f_next = ", f_next)
-            #println("g_next = ", g_next)
+            gamma_next = gamma_initial*sqrt(k+1)
 
-            # should be <= not < else can get stuck if g is an indicator function
-            if f_next + g_next <= fg
-                # increase the step size and move to next step
-                gamma_next = gamma/1.2
-                break
-            else
-                # decrease the step size and try again
-                gamma = gamma*2
+        else
+            # line search
+            while true
+                v = theta - gradfs[:,k]/(2*gamma)
+                theta_next = proxg(gamma, v)
+                f_next = f(theta_next) 
+                g_next = g(theta_next)
+
+                
+                # should be <= not < else can get stuck if g is an indicator function
+                if f_next + g_next <= fg
+                    # increase the step size and move to next step
+                    gamma_next = gamma/1.2
+                    break
+                else
+                    # decrease the step size and try again
+                    gamma = gamma*2
+                end
             end
         end
+
+        
         # save the variables
         thetas[:,k+1] = theta_next
         gammas[k+1] = gamma_next
@@ -249,8 +259,8 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
         if S.progress != nothing
             S.progress(k+1,theta_next)
         end
-        # stopping criterion
-        if k > min_iters && fg - (f_next + g_next) < eps
+
+        if k > min_iters && ! S.stochastic && fg - (f_next + g_next) < eps
             break
         end
 
@@ -263,3 +273,11 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
     return thetas[:, k+1]
     
 end
+
+
+
+
+
+##############################################################################
+
+
