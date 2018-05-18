@@ -27,12 +27,12 @@ end
 # multiclass support functions
 
 function margin(pi, pj, y)
-    return dot(pj-pi,y) + 0.5*(dot(pi,pi) - dot(pj,pj))
+    return (2*dot(pi-pj,y) + dot(pj,pj) - dot(pi,pi)) / (2*norm(pi-pj))
 end
 
 # gradient of margin wrt y
 function dmargin(pi, pj, y)
-    return pj-pi
+    return (pi - pj)/norm(pi-pj)
 end
 
 function findclosest(reps, y)
@@ -65,7 +65,7 @@ function loss(L::MultiHingeLoss, yhat::Array{T,1}, y::Array{Float64,1}) where {T
     s = zeros(K)
     for i=1:K
         if i != j
-            s[i] = max(1-margin(L.reps[i], yrep, yhat), 0)
+            s[i] = max(1+margin(L.reps[i], yrep, yhat), 0)
         else
             s[i] = -Inf
         end
@@ -81,7 +81,7 @@ function cvxloss(L::MultiHingeLoss, yhat, y)
     for i=1:K
         if i != j
             m = margin(L.reps[i], yrep, yhat)
-            s = max(1-m, s)
+            s = max(1+m, s)
         end
     end
     return s
@@ -89,8 +89,41 @@ end
 
 
 ########################################
-# multiclass logistic loss
+# multiclass logistic loss, special case for speed
 
+struct MultiLogisticOneHotLoss <: LossDiff end
+
+
+function loss(L::MultiLogisticOneHotLoss, yhat::Array{T,1}, y::Array{Float64,1}) where {T<:Any}
+    # psij = y
+    K = length(yhat)
+    vmax, j = findmax(y)
+    s = 0.0
+    for i=1:K
+        ma = (yhat[i] - yhat[j])/sqrt(2)
+        s = s + exp(ma)
+    end
+    return log(s)
+end
+
+
+function derivloss(L::MultiLogisticOneHotLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
+    K = length(yhat)
+    vmax, j = findmax(y)
+    z = zeros(length(yhat))
+    sumz = 0.0
+    for i=1:K
+        ma = (yhat[i] - yhat[j])/sqrt(2)
+        e = exp(ma)
+        z[i] = e
+        sumz += e
+    end
+    z[j] -= sumz 
+    return z/sumz/sqrt(2)
+end
+
+##############################################################################
+# multiclass logistic loss
 
 struct MultiLogisticLoss <: LossDiff
     reps  # list of representative points in R^m
@@ -104,7 +137,11 @@ function loss(L::MultiLogisticLoss, yhat::Array{T,1}, y::Array{Float64,1}) where
     yrep = L.reps[j]
     s = 0.0
     for i=1:K
-        s = s + exp(1-margin(L.reps[i], yrep, yhat))
+        ma = 0
+        if i != j
+            ma = margin(L.reps[i], yrep, yhat)
+        end
+        s += exp(ma)
     end
     return log(s)
 end
@@ -114,14 +151,21 @@ function derivloss(L::MultiLogisticLoss, yhat::Array{Float64,1}, y::Array{Float6
     K = length(L.reps)
     j = findclosest(L.reps, y)
     yrep = L.reps[j]
-    s = 0.0
-    se = 0.0
+    s = zeros(length(yhat))
+    sumz = 0.0
     for i=1:K
-        e = exp(1-margin(L.reps[i], yrep, yhat))
-        se += e
-        s  += e * dmargin(L.reps[i], yrep, yhat)
+        ma = 0.0
+        dma = 0.0
+        if i != j
+            ma = margin(L.reps[i], yrep, yhat)
+            dma = dmargin(L.reps[i], yrep, yhat)
+        end
+        e = exp(ma)
+        sumz += e
+        s += e*dma
     end
-    return -s/se
+
+    return s/sumz
 end
 
 #########################################
