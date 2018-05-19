@@ -419,18 +419,18 @@ function loss(L::Loss, Yhat::Array{T,2}, Y::Array{Float64,2}) where {T<:Any}
     return (1/n) * s
 end
 
-function addup(dtheta,X,s,i,d,m)
+function addup(dtheta,Xt,s,i,d,m)
     for pi=1:d
         for pj=1:m
-            dtheta[pi,pj] += X[i,pi]*s[pj]
+            dtheta[pi,pj] += Xt[pi,i]*s[pj]
         end
     end
 end
 
 # gradient of average loss wrt theta
 function derivlosstheta(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2},
-                        X::Array{Float64,2}, stochastic)
-    n,d = size(X)
+                        Xt::Array{Float64,2}, stochastic)
+    d,n = size(Xt)
     m = size(Y,2)
     dtheta = zeros(d,m)
     batch = 200
@@ -439,14 +439,14 @@ function derivlosstheta(L::Loss, Yhat::Array{Float64,2}, Y::Array{Float64,2},
         for i in samples
             s = derivloss(L, Yhat[i,:], Y[i,:])
             #dtheta += X[i,:]*s'
-            addup(dtheta,X,s,i,d,m)
+            addup(dtheta,Xt,s,i,d,m)
         end
         return dtheta/batch
     else
         for i in 1:n
             s = derivloss(L, Yhat[i,:], Y[i,:])
             #dtheta += X[i,:]*s'
-            addup(dtheta,X,s,i,d,m)
+            addup(dtheta,Xt,s,i,d,m)
         end
         return dtheta/n
     end

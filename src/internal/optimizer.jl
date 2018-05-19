@@ -24,6 +24,7 @@ mutable struct ProxGradientSolver <: Solver
     gs
     progress
     stochastic
+    storedata
 end
 
 name(S::ProxGradientSolver) = "ProxGradientSolver"
@@ -38,10 +39,13 @@ print(io::IO, S::Solver) = print(io, name(S))
 ProxGradientSolver(;verbose=false, eps=1e-6,
                    maxiters=1000, miniters=1, 
                    gamma_initial=0.1,
-                   progress=nothing, stochastic=false) = ProxGradientSolver(verbose, eps, maxiters, miniters,
-                                                                            gamma_initial, nothing, nothing,
-                                                                            nothing, nothing, nothing, progress,
-                                                                            stochastic)
+                   progress=nothing, stochastic=false,
+                   storedata = true) = ProxGradientSolver(verbose, eps, maxiters, miniters,
+                                                          gamma_initial, nothing, nothing,
+                                                          nothing, nothing, nothing, progress,
+                                                          stochastic, storedata)
+
+
 
 CvxSolver(;verbose=false, eps=1e-5) = CvxSolver(verbose, eps)
 
@@ -143,6 +147,7 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
     d = size(X,2)
     n = size(X,1)
     m = size(Y,2)
+    Xt = X'
 
     # useful stuff
     # f = loss(theta)
@@ -155,7 +160,7 @@ function solve(S::ProxGradientSolver, L::Loss, R::Regularizer,
     R1 = repmat(regweights, 1,m)
     rw = regparam*R1[:]
     f(theta) = loss(L, X*reshape(theta,d,m) , Y)
-    gradf(theta) = derivlosstheta(L, X*reshape(theta,d,m), Y, X, S.stochastic)[:]
+    gradf(theta) = derivlosstheta(L, X*reshape(theta,d,m), Y, Xt, S.stochastic)[:]
     g(theta) = reg(R, rw, theta[:])
     proxg(gamma, v) = prox(R, gamma, rw, v)
 
@@ -179,11 +184,13 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
     gamma_initial = S.gamma_initial
     
     # buffers
-    thetas = zeros(d, max_iters)
-    gammas = zeros(max_iters)
-    gradfs = zeros(d, max_iters)
-    fs = zeros(max_iters)
-    gs = zeros(max_iters)
+    if S.storedata
+        thetas = zeros(d, max_iters)
+        gammas = zeros(max_iters)
+        gradfs = zeros(d, max_iters)
+        fs = zeros(max_iters)
+        gs = zeros(max_iters)
+    end
 
     # initial conditions
     if theta_guess != nothing
@@ -192,34 +199,39 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
         theta_initial = zeros(d)
     end
 
+    # initialize
+    theta = theta_initial
+    gamma = gamma_initial
+    gradfvalue = zeros(d)
+    fvalue = f(theta)
+    gvalue = g(theta)
+    
     # store first step
-    thetas[:,1] = theta_initial
-    gammas[1] = gamma_initial
-    fs[1] = f(theta_initial)
-    gs[1] = g(theta_initial)
-    gradfs[:,1] = gradf(theta_initial)
+    if S.storedata
+        thetas[:,1] = theta
+        gammas[1] = gamma
+        fs[1] = fvalue
+        gs[1] = gvalue
+    end
         
     # make inner loop variables accessible
-    gamma_next = 0.0
-    theta_next = zeros(d)
-    f_next = 0.0
-    g_next = 0.0
-    gradf_next = zeros(d)
     k=1
     
     # loop
     for k=1:max_iters-1
-        gamma = gammas[k]
-        theta = thetas[:,k]
-        fg = fs[k] + gs[k]
-
 
         # printing
         if verbose
-            @printf("%d   gamma: %f   loss: %f   reg: %f \n", k, gamma, f(theta), g(theta))
+            @printf("%d   gamma: %f   loss: %f   reg: %f \n", k, gamma, fvalue, gvalue)
         end
 
-        gradfs[:,k] = gradf(theta)
+
+
+        gradfvalue = gradf(theta)
+        
+        if S.storedata
+            gradfs[:,k] = gradfvalue
+        end
 
         if S.stochastic
             v = theta - gradfs[:,k]/(2*gamma)
@@ -231,16 +243,16 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
         else
             # line search
             while true
-                v = theta - gradfs[:,k]/(2*gamma)
+                v = theta - gradfvalue/(2*gamma)
                 theta_next = proxg(gamma, v)
                 f_next = f(theta_next) 
                 g_next = g(theta_next)
 
                 
                 # should be <= not < else can get stuck if g is an indicator function
-                if f_next + g_next <= fg
+                if f_next + g_next <= fvalue + gvalue
                     # increase the step size and move to next step
-                    gamma_next = gamma/1.2
+                    gamma = gamma/1.2
                     break
                 else
                     # decrease the step size and try again
@@ -249,28 +261,37 @@ function proxgradient(d, f, gradf, g, proxg, S; theta_guess=nothing)
             end
         end
 
-        
-        # save the variables
-        thetas[:,k+1] = theta_next
-        gammas[k+1] = gamma_next
-        fs[k+1] = f_next
-        gs[k+1] = g_next
-
-        if S.progress != nothing
-            S.progress(k+1,theta_next)
-        end
-
-        if k > min_iters && ! S.stochastic && fg - (f_next + g_next) < eps
+        if k > min_iters && ! S.stochastic && fvalue + gvalue - (f_next + g_next) < eps
             break
         end
+        
+        fvalue = f_next
+        gvalue = g_next
+        theta = theta_next
+
+        # save the variables
+        if S.storedata
+            thetas[:,k+1] = theta
+            gammas[k+1] = gamma
+            fs[k+1] = fvalue
+            gs[k+1] = gvalue
+        end
+
+        if S.progress != nothing
+            S.progress(k+1,theta)
+        end
+
 
     end
-    S.thetas = thetas[:,1:k+1]
-    S.gammas = gammas[1:k+1]
-    S.gradfs = gradfs[:,1:k+1]
-    S.fs = fs[1:k+1]
-    S.gs = gs[1:k+1]
-    return thetas[:, k+1]
+    if S.storedata
+        S.thetas = thetas[:,1:k+1]
+        S.gammas = gammas[1:k+1]
+        S.gradfs = gradfs[:,1:k+1]
+        S.fs = fs[1:k+1]
+        S.gs = gs[1:k+1]
+    end
+
+    return theta
     
 end
 
