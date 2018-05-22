@@ -100,9 +100,9 @@ end
 
 
 
-function getXY(F::FrameSource; Uestnumcols=0, Vestnumcols=0)
-    Xf = applyfmaplist(F.Xmaps, F.Uf; estnumcols = Uestnumcols)
-    Yf = applyfmaplist(F.Ymaps, F.Vf; estnumcols = Vestnumcols)
+function getXY(F::FrameSource; Uestnumcols=0, Vestnumcols=0, verbose=false)
+    Xf = applyfmaplist(F.Xmaps, F.Uf; estnumcols = Uestnumcols, verbose=verbose)
+    Yf = applyfmaplist(F.Ymaps, F.Vf; estnumcols = Vestnumcols, verbose=verbose)
     X = value(Xf)
     Y = value(Yf)
     F.Xnames = Xf.names
@@ -550,11 +550,14 @@ end
 
 
 
-function applyfmaplist(fmaps, uvframe; estnumcols=0)
+function applyfmaplist(fmaps, uvframe; estnumcols=0, verbose=false)
     n = size(uvframe,1)
     xyframe = DFrame(n; estnumcols=estnumcols)
     ne = length(fmaps)
     for i=1:ne
+        if verbose
+            println("Applying feature map: ", string(typeof(fmaps[i])))
+        end
         applyfmap(fmaps[i], uvframe, xyframe)
     end
     return xyframe

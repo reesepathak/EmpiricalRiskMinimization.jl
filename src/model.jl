@@ -23,12 +23,13 @@ mutable struct Model
     disinvalid::Bool
     Uestnumcols
     Vestnumcols
+    embedallwarning::Bool
 end
 
 
 function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
                Unames = nothing, Vnames = nothing,
-               embedall = false, verbose=false,
+               embedall = true, verbose=true,
                Uestnumcols = 0, Vestnumcols=0, kwargs...)
     S = makeFrameSource(U, V, Unames, Vnames; kwargs...)
     M =  Model(NoData(),
@@ -42,13 +43,15 @@ function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
                verbose, #verbose
                true, # xydataisinvalid
                true,  # disinvalid
-               Uestnumcols, Vestnumcols)
+               Uestnumcols, Vestnumcols,
+               false)
     setdata(M)
     if embedall
         if M.verbose
             println("Model: applying default embedding")
         end
         defaultembedding(M; kwargs...)
+        M.embedallwarning = true
     end
     return M
 end
@@ -98,9 +101,10 @@ function splitrows(n, trainfrac::Number; splitmethod=0)
 end
 
 function setdata(M::Model)
-    M.X, M.Y  = getXY(M.S; Uestnumcols = M.Uestnumcols, Vestnumcols = M.Vestnumcols)
+    M.X, M.Y  = getXY(M.S; Uestnumcols = M.Uestnumcols, Vestnumcols = M.Vestnumcols, verbose=M.verbose)
     M.xydataisinvalid = false
     setregweights(M)
+    return
 end
 
 function setregweights(M::Model)
@@ -121,8 +125,8 @@ function setregweights(M::Model)
 end
 
 function defaultembedding(M::Model; stand=true)
-    addfeatureV(M, 1, stand=stand)
-    addfeatureU(M, etype="one")
+    addfeatureV(M, 1, stand=stand, rebuild=false)
+    addfeatureU(M, etype="one", rebuild=false)
     d = size(getU(M),2) 
     for i=1:d
         addfeatureU(M, i, stand=stand, rebuild=false)
@@ -383,7 +387,18 @@ import Base.split
 split(M::Model; kwargs...) = splittraintest(M; force=true, kwargs...)
 
 
+function warnembeddings(M)
+    if !M.verbose
+        return
+    end
+    if !M.embedallwarning
+        return
+    end
+    println("Warning: You are adding features to a model which was created with embedall=true")
+end
+
 function addfeatureU(M::Model; rebuild=true, kwargs...)
+    warnembeddings(M)
     M.xydataisinvalid = true
     M.disinvalid = true
     addfeatureU(M.S, nothing; kwargs...)
@@ -393,6 +408,7 @@ function addfeatureU(M::Model; rebuild=true, kwargs...)
 end
 
 function addfeatureV(M::Model; rebuild=true, kwargs...)
+    warnembeddings(M)
     M.xydataisinvalid = true
     M.disinvalid = true
     addfeatureV(M.S, nothing; kwargs...)
@@ -402,6 +418,7 @@ function addfeatureV(M::Model; rebuild=true, kwargs...)
 end
 
 function addfeatureU(M::Model, col; rebuild=true, kwargs...)
+    warnembeddings(M)
     M.xydataisinvalid = true
     M.disinvalid = true
     addfeatureU(M.S, col; kwargs...)
@@ -411,6 +428,7 @@ function addfeatureU(M::Model, col; rebuild=true, kwargs...)
 end
 
 function addfeatureV(M::Model, col; rebuild=true, kwargs...)
+    warnembeddings(M)
     M.xydataisinvalid = true
     M.disinvalid = true
     addfeatureV(M.S, col; kwargs...)
