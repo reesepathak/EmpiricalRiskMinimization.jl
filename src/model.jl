@@ -141,7 +141,7 @@ function defaultembedding(M::Model; stand=true)
     addfeatureU(M, etype="one")
     d = size(getU(M),2) 
     for i=1:d
-        addfeatureU(M, i, stand=stand)
+        addfeatureU(M, i, stand=stand, rebuild=false)
     end
 end
 
