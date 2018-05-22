@@ -83,7 +83,7 @@ function FrameSource(Uf::DFrame, Vf::DFrame)
     return FrameSource(Uf, Vf, Any[], Any[], [0], nothing, nothing)
 end
 
-function makeFrameSource(U, V, Unames, Vnames)
+function makeFrameSource(U, V, Unames, Vnames; kwargs...)
     if Unames != nothing
         Uf = DFrame(matrix(U), Unames)
     else
