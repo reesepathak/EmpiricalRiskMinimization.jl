@@ -3,69 +3,69 @@
 d = k + 1;
 U = randn(n, k); theta = randn(d);
 v = [ones(n) U] * theta + 0.5 * randn(n);</code></pre></div><p>So, we&#39;ve generated 2000 random raw data points, occuping the rows of <code>U</code>. These data points have 30 features. Additionally, we generated targets <code>v</code>, so that <code>v[i]</code> is the label associated with example <code>U[i, :]</code>.</p><p>Formulating and solving (regularized) least square linear regression with ERM.jl is simple. The first step is to instantiate the model</p><div><pre><code class="language-julia">M = Model(U, v, embedall=true);</code></pre><pre><code class="language-none">Model: applying default embedding</code></pre></div><p>The option <code>embedall=true</code> takes <code>U</code> and compiles our true training data <code>X</code>, by appending the constant feature to the rows of <code>U</code>. Additionally, it standardizes our data for us. There are many more features available for <a href="../usage/models.html#usage_models-1">training, embedding, and modelling</a>. Of course, to specify a different model, users must specify different <a href="../usage/losses.html#usage_losses-1">losses</a> and <a href="../usage/regularizers.html#usage_regularizers-1">regularizers</a>. </p><p>Training the model and getting the output is two lines of code.</p><div><pre><code class="language-julia">train(M)
-status(M)</code></pre><pre><code class="language-none">Applying feature map: EmpiricalRiskMinimization.OneFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
-Applying feature map: EmpiricalRiskMinimization.AddColumnFmap
-Applying feature map: EmpiricalRiskMinimization.StandardizeFmap
+status(M)</code></pre><pre><code class="language-none">Applying feature map: add column of ones as feature1
+Applying feature map: Add column 1 as feature2
+Applying feature map: standardize column feature2
+Applying feature map: Add column 2 as feature3
+Applying feature map: standardize column feature3
+Applying feature map: Add column 3 as feature4
+Applying feature map: standardize column feature4
+Applying feature map: Add column 4 as feature5
+Applying feature map: standardize column feature5
+Applying feature map: Add column 5 as feature6
+Applying feature map: standardize column feature6
+Applying feature map: Add column 6 as feature7
+Applying feature map: standardize column feature7
+Applying feature map: Add column 7 as feature8
+Applying feature map: standardize column feature8
+Applying feature map: Add column 8 as feature9
+Applying feature map: standardize column feature9
+Applying feature map: Add column 9 as feature10
+Applying feature map: standardize column feature10
+Applying feature map: Add column 10 as feature11
+Applying feature map: standardize column feature11
+Applying feature map: Add column 11 as feature12
+Applying feature map: standardize column feature12
+Applying feature map: Add column 12 as feature13
+Applying feature map: standardize column feature13
+Applying feature map: Add column 13 as feature14
+Applying feature map: standardize column feature14
+Applying feature map: Add column 14 as feature15
+Applying feature map: standardize column feature15
+Applying feature map: Add column 15 as feature16
+Applying feature map: standardize column feature16
+Applying feature map: Add column 16 as feature17
+Applying feature map: standardize column feature17
+Applying feature map: Add column 17 as feature18
+Applying feature map: standardize column feature18
+Applying feature map: Add column 18 as feature19
+Applying feature map: standardize column feature19
+Applying feature map: Add column 19 as feature20
+Applying feature map: standardize column feature20
+Applying feature map: Add column 20 as feature21
+Applying feature map: standardize column feature21
+Applying feature map: Add column 21 as feature22
+Applying feature map: standardize column feature22
+Applying feature map: Add column 22 as feature23
+Applying feature map: standardize column feature23
+Applying feature map: Add column 23 as feature24
+Applying feature map: standardize column feature24
+Applying feature map: Add column 24 as feature25
+Applying feature map: standardize column feature25
+Applying feature map: Add column 25 as feature26
+Applying feature map: standardize column feature26
+Applying feature map: Add column 26 as feature27
+Applying feature map: standardize column feature27
+Applying feature map: Add column 27 as feature28
+Applying feature map: standardize column feature28
+Applying feature map: Add column 28 as feature29
+Applying feature map: standardize column feature29
+Applying feature map: Add column 29 as feature30
+Applying feature map: standardize column feature30
+Applying feature map: Add column 30 as feature31
+Applying feature map: standardize column feature31
+Applying feature map: Add column 1 as feature0
+Applying feature map: standardize column feature0
 Model: splitting data
 Model: calling solver: QRSolver
 Model: Not regularizing constant feature X[:,1]
