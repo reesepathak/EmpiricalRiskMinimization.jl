@@ -99,7 +99,6 @@ end
 
 
 
-
 function getXY(F::FrameSource; Uestnumcols=0, Vestnumcols=0, verbose=false)
     Xf = applyfmaplist(F.Xmaps, F.Uf; estnumcols = Uestnumcols, verbose=verbose)
     Yf = applyfmaplist(F.Ymaps, F.Vf; estnumcols = Vestnumcols, verbose=verbose)
@@ -246,6 +245,8 @@ mutable struct AddColumnFmap<:FeatureMap
     dest   # destination name, may be nothing
 end
 
+status(FM::AddColumnFmap) = "Add column $(FM.src) as $(FM.dest)"
+
 function applyfmap(FM::AddColumnFmap, uvframe, xyframe)
     srcframe, srccol =  findcolumn(FM.src, uvframe, xyframe)
     u  = columnvalues(srcframe, srccol)
@@ -272,6 +273,8 @@ mutable struct OneHotFmap<:FeatureMap
     valtonum  # dict mapping values to numbers
     vals  # list of the values in order (i.e. a list mapping numbers to values)
 end
+
+status(FM::OneHotFmap) = "Add one-hot column $(FM.src)"
 
 OneHotFmap(c,n,s) = OneHotFmap(c,n,s,false,nothing,nothing,nothing,nothing)
 
@@ -333,6 +336,8 @@ mutable struct OrdinalFmap<:FeatureMap
     categories
 end
 
+status(FM::OrdinalFmap) = "Add ordinal column $(FM.src) with categories $(FM.categories)"
+
 function applyfmap(FM::OrdinalFmap, uvframe, xyframe)
     srcframe, srccol =  findcolumn(FM.src, uvframe, xyframe)
     valtonum = Dict()
@@ -378,6 +383,8 @@ mutable struct FunctionFmap<:FeatureMap
     finv
 end
 
+status(FM::FunctionFmap) = "Add function column $(FM.src)"
+
 function FunctionFmap(src, dest, f)
     if f == log
         finv = exp
@@ -412,6 +419,8 @@ mutable struct FunctionListFmap<:FeatureMap
     f
 end
 
+status(FM::FunctionListFmap) = "add function to columns: $(FM.src)"
+
 function applyfmap(FM::FunctionListFmap, uvframe, xyframe)
     args = Any[]
     for srci in FM.src
@@ -437,6 +446,8 @@ mutable struct UfunctionFmap<:FeatureMap
     f
 end
 
+status(FM::UfunctionFmap) = "apply function to U"
+
 function applyfmap(FM::UfunctionFmap, uvframe, xyframe)
     n = size(uvframe, 1)
     unew  = FM.f(uvframe.A)
@@ -452,6 +463,8 @@ mutable struct StandardizeFmap<:FeatureMap
     std
     used
 end
+
+status(FM::StandardizeFmap) = "standardize column $(FM.src)"
 
 function applyfmap(FM::StandardizeFmap, uvframe, xyframe)
     srcframe, srccol =  findcolumn(FM.src, uvframe, xyframe)
@@ -486,6 +499,8 @@ end
 mutable struct OneFmap<:FeatureMap
     dest # destination name, may be nothing
 end
+
+status(FM::OneFmap) = "add column of ones as $(FM.dest)"
 
 function applyfmap(FM::OneFmap, uvframe, xyframe)
     n = size(uvframe, 1)
@@ -556,7 +571,7 @@ function applyfmaplist(fmaps, uvframe; estnumcols=0, verbose=false)
     ne = length(fmaps)
     for i=1:ne
         if verbose
-            println("Applying feature map: ", string(typeof(fmaps[i])))
+            println("Applying feature map: ", status(fmaps[i]))
         end
         applyfmap(fmaps[i], uvframe, xyframe)
     end

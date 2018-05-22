@@ -156,7 +156,14 @@ end
 
 ##############################################################################
 
-
+function warndata(M)
+    if length(M.S.Xmaps)==0
+        println("Warning: Model has no X data. Use addfeatureU or Model(...,embedall=true)")
+    end
+    if length(M.S.Ymaps)==0
+        println("Warning: Model has no Y data. Use addfeatureV or Model(...,embedall=true)")
+    end
+end
 function splittraintestx(M, trainfrac)
     setdata(M)
     if M.verbose
@@ -268,6 +275,7 @@ a model `M`. Specify regularization weight through optional argument
 """
 function trainfolds(M::Model; lambda=1e-10, nfolds=5,
                     resplit=false, features=nothing, kwargs...)
+    warndata(M)
     splitfolds(M, nfolds, resplit)
     M.D.results = trainfoldsx(M, lambda, nfolds)
     M.istrained = true
@@ -294,6 +302,7 @@ Example `trainpath(M, trainfrac=0.75)` trains w/ 75-25 train-test split.
 """
 function trainpath(M::Model; lambda=logspace(-5,5,100), trainfrac=0.8,
                    resplit=false, features=nothing, kwargs...)
+    warndata(M)
     splittraintest(M; trainfrac=trainfrac, resplit=resplit)
     M.D.results = trainpathx(M, lambda)
     M.istrained = true
@@ -315,6 +324,7 @@ be used for test. The default parameters are
 80-20 train-test split."""
 function train(M::Model; lambda=1e-10, trainfrac=nothing,
                resplit=false, kwargs...)
+    warndata(M)
     splittraintest(M; trainfrac=trainfrac, resplit=resplit)
     M.D.results = trainx(M, lambda, Xtrain(M), Xtest(M), Ytrain(M), Ytest(M); kwargs...)
     M.istrained = true
