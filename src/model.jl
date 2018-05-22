@@ -16,7 +16,6 @@ mutable struct Model
     S::DataSource
     X
     Y
-    featurelist                  # a list of the columns of X that are of interest
     regweights
     istrained::Bool
     verbose::Bool
@@ -26,20 +25,6 @@ mutable struct Model
     Vestnumcols
 end
 
-# function Model(S::DataSource, loss, reg, verbose; Uestnumcols=0, Vestnumcols=0)
-#     M =  Model(NoData(), loss, reg, DefaultSolver(), S,
-#                nothing, nothing, #X,Y
-#                "all", # featurelist
-#                nothing, #regweights
-#                false, #istrained
-#                verbose, #verbose
-#                true, # xydataisinvalid
-#                true,  # disinvalid
-#                Uestnumcols, Vestnumcols,0
-#                )
-#     setdata(M)
-#     return M
-# end
 
 function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
                Unames = nothing, Vnames = nothing,
@@ -52,7 +37,6 @@ function Model(U, V; loss=SquareLoss(), reg=L2Reg(),
                DefaultSolver(),
                S,
                nothing, nothing, #X,Y
-               "all", # featurelist
                nothing, #regweights
                false, #istrained
                verbose, #verbose
@@ -123,7 +107,7 @@ function setregweights(M::Model)
     if M.xydataisinvalid
         return
     end
-    X = selectfeatures(M, M.X)
+    X = M.X
     d = size(X,2)
     R = ones(d)
     for i=1:d
@@ -281,9 +265,6 @@ a model `M`. Specify regularization weight through optional argument
 function trainfolds(M::Model; lambda=1e-10, nfolds=5,
                     resplit=false, features=nothing, kwargs...)
     splitfolds(M, nfolds, resplit)
-    if features != nothing
-        setfeatures(M, features)
-    end
     M.D.results = trainfoldsx(M, lambda, nfolds)
     M.istrained = true
     if M.verbose
@@ -310,9 +291,6 @@ Example `trainpath(M, trainfrac=0.75)` trains w/ 75-25 train-test split.
 function trainpath(M::Model; lambda=logspace(-5,5,100), trainfrac=0.8,
                    resplit=false, features=nothing, kwargs...)
     splittraintest(M; trainfrac=trainfrac, resplit=resplit)
-    if features != nothing
-        setfeatures(M, features)
-    end
     M.D.results = trainpathx(M, lambda)
     M.istrained = true
     if M.verbose
@@ -332,11 +310,8 @@ be used for test. The default parameters are
 `lambda = 1e-10` and `trainfrac=nothing`, which will result in a 
 80-20 train-test split."""
 function train(M::Model; lambda=1e-10, trainfrac=nothing,
-               resplit=false, features=nothing, kwargs...)
+               resplit=false, kwargs...)
     splittraintest(M; trainfrac=trainfrac, resplit=resplit)
-    if features != nothing
-        setfeatures(M, features)
-    end
     M.D.results = trainx(M, lambda, Xtrain(M), Xtest(M), Ytrain(M), Ytest(M); kwargs...)
     M.istrained = true
     if M.verbose
@@ -352,11 +327,7 @@ function assignsolver(M::Model, force=false)
     end
 end
 
-"`setfeatures(M, lst)` specifies the columns of the input data matrix `U` to use for training."
-function setfeatures(M::Model, f)
-    M.featurelist = f
-    setregweights(M)
-end
+
 
 function setloss(M::Model, l)
     M.loss = l
@@ -378,23 +349,14 @@ end
 
 ##############################################################################
 # querying
-function selectfeatures(M::Model, X)
-    if M.featurelist == "all" 
-        return X
-    end
-    if size(X,2) ==0
-        return X
-    end
-    return X[:,M.featurelist]
-end
 
 getU(M::Model) = getU(M.S)
 getV(M::Model) = getV(M.S)
 #getXY(M::Model) = getXY(M.S)
 
 
-Xtest(M::Model) = selectfeatures(M, Xtest(M.D))
-Xtrain(M::Model) = selectfeatures(M, Xtrain(M.D))
+Xtest(M::Model) = Xtest(M.D)
+Xtrain(M::Model) =  Xtrain(M.D)
 Xtrain(D::SplitData) = D.Xtrain
 Xtest(D::SplitData) = D.Xtest
 Utrain(M::Model) = getU(M.S)[M.D.trainrows,:]
@@ -403,8 +365,8 @@ Vtrain(M::Model) = getV(M.S)[M.D.trainrows,:]
 Vtest(M::Model)  = getV(M.S)[M.D.testrows,:]
 
 
-Xtest(M::Model, fold) = selectfeatures(M, Xtest(M.D, fold))
-Xtrain(M::Model, fold) = selectfeatures(M, Xtrain(M.D, fold))
+Xtest(M::Model, fold) = Xtest(M.D, fold)
+Xtrain(M::Model, fold) = Xtrain(M.D, fold)
 Xtrain(D::FoldedData, fold) = D.X[D.nonfoldrows[fold],:]
 Ytrain(D::FoldedData, fold) = D.Y[D.nonfoldrows[fold],:]
 Xtest(D::FoldedData, fold) = D.X[D.foldrows[fold],:]
@@ -424,7 +386,6 @@ split(M::Model; kwargs...) = splittraintest(M; force=true, kwargs...)
 function addfeatureU(M::Model; rebuild=true, kwargs...)
     M.xydataisinvalid = true
     M.disinvalid = true
-    setfeatures(M, "all")
     addfeatureU(M.S, nothing; kwargs...)
     if rebuild
         setdata(M)
@@ -434,7 +395,6 @@ end
 function addfeatureV(M::Model; rebuild=true, kwargs...)
     M.xydataisinvalid = true
     M.disinvalid = true
-    setfeatures(M, "all")
     addfeatureV(M.S, nothing; kwargs...)
     if rebuild
         setdata(M)
@@ -444,7 +404,6 @@ end
 function addfeatureU(M::Model, col; rebuild=true, kwargs...)
     M.xydataisinvalid = true
     M.disinvalid = true
-    setfeatures(M, "all")
     addfeatureU(M.S, col; kwargs...)
     if rebuild
         setdata(M)
@@ -454,7 +413,6 @@ end
 function addfeatureV(M::Model, col; rebuild=true, kwargs...)
     M.xydataisinvalid = true
     M.disinvalid = true
-    setfeatures(M, "all")
     addfeatureV(M.S, col; kwargs...)
     if rebuild
         setdata(M)
