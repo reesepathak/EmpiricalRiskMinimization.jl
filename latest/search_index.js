@@ -249,14 +249,6 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "lib/models.html#EmpiricalRiskMinimization.setfeatures-Tuple{EmpiricalRiskMinimization.Model,Any}",
-    "page": "Models and training",
-    "title": "EmpiricalRiskMinimization.setfeatures",
-    "category": "method",
-    "text": "setfeatures(M, lst) specifies the columns of the input data matrix U to use for training.\n\n\n\n"
-},
-
-{
     "location": "lib/models.html#EmpiricalRiskMinimization.status-Tuple{EmpiricalRiskMinimization.Model}",
     "page": "Models and training",
     "title": "EmpiricalRiskMinimization.status",
