@@ -125,11 +125,11 @@ function setregweights(M::Model)
 end
 
 function defaultembedding(M::Model; stand=true)
-    addfeatureV(M, 1, stand=stand, rebuild=false)
-    addfeatureU(M, etype="one", rebuild=false)
+    addfeatureV(M, 1, stand=stand)
+    addfeatureU(M, etype="one")
     d = size(getU(M),2) 
     for i=1:d
-        addfeatureU(M, i, stand=stand, rebuild=false)
+        addfeatureU(M, i, stand=stand)
     end
 end
 
@@ -407,44 +407,32 @@ function warnembeddings(M)
     println("Warning: You are adding features to a model which was created with embedall=true")
 end
 
-function addfeatureU(M::Model; rebuild=true, kwargs...)
+function addfeatureU(M::Model; kwargs...)
     warnembeddings(M)
     M.xydataisinvalid = true
     M.disinvalid = true
     addfeatureU(M.S, nothing; kwargs...)
-    if rebuild
-        setdata(M)
-    end
 end
 
-function addfeatureV(M::Model; rebuild=true, kwargs...)
+function addfeatureV(M::Model; kwargs...)
     warnembeddings(M)
     M.xydataisinvalid = true
     M.disinvalid = true
     addfeatureV(M.S, nothing; kwargs...)
-    if rebuild
-        setdata(M)
-    end
 end
 
-function addfeatureU(M::Model, col; rebuild=true, kwargs...)
+function addfeatureU(M::Model, col; kwargs...)
     warnembeddings(M)
     M.xydataisinvalid = true
     M.disinvalid = true
     addfeatureU(M.S, col; kwargs...)
-    if rebuild
-        setdata(M)
-    end
 end
 
-function addfeatureV(M::Model, col; rebuild=true, kwargs...)
+function addfeatureV(M::Model, col; kwargs...)
     warnembeddings(M)
     M.xydataisinvalid = true
     M.disinvalid = true
     addfeatureV(M.S, col; kwargs...)
-    if rebuild
-        setdata(M)
-    end
 end
 
 

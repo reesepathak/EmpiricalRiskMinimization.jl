@@ -116,7 +116,17 @@ getV(F::FrameSource) = value(F.Vf)
 
 # embed one data record
 function embedU(F::FrameSource, u::Array{T,1}) where {T<:Any}
-    U = reshape(u, 1, length(u))
+    if size(F.Uf,2) == 1
+        # U has only one column, so we are embedding
+        # many 1 dimensional records
+        U = reshape(u, length(u),1)
+    else
+        # U has more than one column
+        # so we must be embedding a single record
+        # (and the records must have dimension equal to length(u)
+        # otherwise this will fail.)
+        U = reshape(u, 1, length(u))
+    end
     embedU(F, U)
 end
 
@@ -571,7 +581,7 @@ function applyfmaplist(fmaps, uvframe; estnumcols=0, verbose=false)
     ne = length(fmaps)
     for i=1:ne
         if verbose
-            println("Applying feature map: ", status(fmaps[i]))
+            println("FrameSource: Applying feature map: ", status(fmaps[i]))
         end
         applyfmap(fmaps[i], uvframe, xyframe)
     end
