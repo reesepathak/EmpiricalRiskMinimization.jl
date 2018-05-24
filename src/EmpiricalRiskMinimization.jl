@@ -7,6 +7,7 @@ using Compat
 # Losses
 export loss
 export SquareLoss, AbsoluteLoss, HuberLoss, HingeLoss, LogisticLoss, SigmoidLoss
+export MultiLogisticOneHotLoss
 include("losses.jl")
 
 # Regularizers
