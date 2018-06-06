@@ -464,6 +464,42 @@ function applyfmap(FM::UfunctionFmap, uvframe, xyframe)
     appendcol(xyframe, FM.dest, unew)
 end
 
+########################################################
+mutable struct AllFmap<:FeatureMap
+    dest # destination name, may be nothing
+    stand  # boolean
+    addones #bool
+    mean
+    std
+    used
+end
+
+AllFmap(dest, stand, addones) = AllFmap(dest, stand, addones,
+                                        nothing, nothing, false)
+
+
+status(FM::AllFmap) = "embed all at once"
+
+function applyfmap(FM::AllFmap, uvframe, xyframe)
+    U = uvframe.A
+    if !FM.used
+        if FM.stand
+            FM.mean = mean(U,1)
+            FM.std = std(U,1)
+        else
+            FM.mean = zeros(1,d)
+            FM.std = ones(1,d)
+        end
+        FM.used = true
+    end
+    n,d = size(U)
+    unew = (U - repmat(FM.mean,n,1))./repmat(FM.std,n,1)
+    if FM.addones
+        unew = [ones(n) unew]
+    end
+    appendcol(xyframe, FM.dest, unew)
+end
+
 ##############################
 
 mutable struct StandardizeFmap<:FeatureMap
@@ -522,7 +558,7 @@ end
     
 function getfeature(col; name = nothing, etype="number",
                     categories = nothing,
-                    f = nothing, kwargs...)
+                    f = nothing, stand=true, addones=false, kwargs...)
     if etype == "number"
         return AddColumnFmap(col, name)
     elseif etype == "onehot"
@@ -541,6 +577,8 @@ function getfeature(col; name = nothing, etype="number",
         return FunctionListFmap(col, name, f)
     elseif etype == "ufunction"
         return UfunctionFmap(name, f)
+    elseif etype == "all"
+        return AllFmap(name, stand, addones)
     elseif etype == "one"
         return OneFmap(name)
     end
@@ -555,7 +593,7 @@ function addfeaturex(fmaps, count, col;
     end
     fe = getfeature(col; name=name, etype=etype, kwargs...)
     push!(fmaps, fe)
-    if stand && etype != "onehot" && etype != "one" && etype != "onehotstd" && etype != "ufunction"
+    if stand && etype != "onehot" && etype != "one" && etype != "onehotstd" && etype != "ufunction" && etype != "all"
         # add a featurizer that replaces the feature with
         # with a standardized version that has the same name
         addfeaturex(fmaps, count, name;

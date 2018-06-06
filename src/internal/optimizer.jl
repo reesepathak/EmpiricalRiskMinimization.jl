@@ -124,14 +124,26 @@ function ls(X,Y)
 end
 
 
-function lsreg(X, Y, lambda, regweights)
+function lsreg(X, Y, lmb, regweights)
     d = size(X,2)
+    if d>5000
+        return svdlsreg(X,Y,lmb)
+    end
     m = size(Y,2)
-    A = sqrt(lambda) * diagm(sqrt.(regweights))
+    A = sqrt(lmb) * diagm(sqrt.(regweights))
     Xh = [X; A]
     Yh = [Y; zeros(d,m)]
     theta = ls(Xh,Yh)
 end
+
+# always regularizes all of theta
+function svdlsreg(X, Y, lmb)
+    U,S,V=svd(X)
+    d = S./(S.*S + lmb)
+    th = V*(d.*(U'*Y))
+    return th
+end
+
 ##############################################################################
 
 

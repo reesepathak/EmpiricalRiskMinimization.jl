@@ -124,15 +124,19 @@ function setregweights(M::Model)
     M.regweights = R
 end
 
-function defaultembedding(M::Model; stand=true)
-    addfeatureV(M, 1, stand=stand)
-    addfeatureU(M, etype="one")
-    d = size(getU(M),2) 
-    for i=1:d
-        addfeatureU(M, i, stand=stand)
-    end
-end
+# function defaultembedding(M::Model; stand=true)
+#     addfeatureV(M, 1, stand=stand)
+#     addfeatureU(M, etype="one")
+#     d = size(getU(M),2) 
+#     for i=1:d
+#         addfeatureU(M, i, stand=stand)
+#     end
+# end
 
+function defaultembedding(M::Model; stand=true, kwargs...)
+    addfeatureV(M, 1, stand=stand)
+    addfeatureU(M, etype="all", stand=stand, addones=true, kwargs...)
+end
 
 ##############################################################################
 
