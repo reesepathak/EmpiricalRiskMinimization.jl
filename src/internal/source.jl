@@ -2,7 +2,7 @@
 ##############################################################################
 # an array of strings with header info
 
-
+import Statistics
 
 mutable struct DFrame
     A
@@ -12,7 +12,7 @@ end
 
 # empty frame
 function DFrame(numrows::Integer; estnumcols=0)
-    A =  Array{Float64}(numrows,estnumcols)
+    A =  Array{Float64}(undef,numrows,estnumcols)
     names = Any[]
     return DFrame(A,names,0)
 end
@@ -305,12 +305,12 @@ function applyfmap(FM::OneHotFmap, uvframe, xyframe)
     u = coltoonehot(srcframe, srccol, valtonum)
     if FM.standardize
         if !FM.used
-            FM.mean = mean(u,1)
-            FM.std = std(u,1)
+            FM.mean = Statistics.mean(u,dims=1)
+            FM.std = Statistics.std(u,dims=1)
             FM.used = true
         end
         n = size(u,1)
-        u = (u - repmat(FM.mean, n, 1))./repmat(FM.std,n,1)
+        u = (u - repeat(FM.mean, n, 1))./repeat(FM.std,n,1)
     end
     appendcol(xyframe, FM.dest, u)
 end
@@ -484,8 +484,8 @@ function applyfmap(FM::AllFmap, uvframe, xyframe)
     U = uvframe.A
     if !FM.used
         if FM.stand
-            FM.mean = mean(U,1)
-            FM.std = std(U,1)
+            FM.mean = Statistics.mean(U,dims=1)
+            FM.std =Statistics.std(U,dims=1)
         else
             FM.mean = zeros(1,d)
             FM.std = ones(1,d)
@@ -493,7 +493,7 @@ function applyfmap(FM::AllFmap, uvframe, xyframe)
         FM.used = true
     end
     n,d = size(U)
-    unew = (U - repmat(FM.mean,n,1))./repmat(FM.std,n,1)
+    unew = (U - repeat(FM.mean,n,1))./repeat(FM.std,n,1)
     if FM.addones
         unew = [ones(n) unew]
     end
@@ -516,14 +516,14 @@ function applyfmap(FM::StandardizeFmap, uvframe, xyframe)
     srcframe, srccol =  findcolumn(FM.src, uvframe, xyframe)
     u  = columnvalues(srcframe, srccol)
     if !FM.used
-        FM.mean = mean(u)
-        FM.std = std(u)
+        FM.mean = Statistics.mean(u)
+        FM.std = Statistics.std(u)
         if FM.std<1e-2
             FM.std=1
         end
         FM.used = true
     end
-    unew = (u - FM.mean)/FM.std
+    unew = (u .- FM.mean)/FM.std
     appendcol(xyframe, FM.dest, unew)
 end
 

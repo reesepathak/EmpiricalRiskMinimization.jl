@@ -8,6 +8,9 @@ respectively, and `Loss()` specifies some type of training loss (default: `Squar
 and `Reg()` specifies some type of regularizer (default: `L2Reg()`). 
 For more details, see the description of ERM models in the usage notes. 
 """
+
+using Random
+
 mutable struct Model
     D::Data
     loss::Loss
@@ -115,7 +118,7 @@ function setregweights(M::Model)
     d = size(X,2)
     R = ones(d)
     for i=1:d
-        if var(X[:,i]) == 0
+        if Statistics.var(X[:,i]) == 0
             if norm(X[:,i]) != 0
                 R[i] = 0
             end
@@ -469,7 +472,7 @@ function status(io::IO, M::Model)
 end
 
 """`status(M)` prints the status of the model after the most recent action performed on it."""
-status(M::Model; kwargs...)  = status(STDOUT, M; kwargs...)
+status(M::Model; kwargs...)  = status(stdout, M; kwargs...)
 
 
 

@@ -1,7 +1,8 @@
 
-using Convex
-using SCS
+#using Convex
+#using SCS
 
+using Printf
 abstract type Solver end
 
 struct QRSolver <: Solver end
@@ -118,7 +119,9 @@ end
 #    theta:   d by 1 vector
 #
 function ls(X,Y)
-    Q,R = qr(X)
+    F = qr(X)
+    Q = Matrix(F.Q)
+    R = Matrix(F.R)
     theta = R\(Q'*Y)
     return theta
 end
@@ -130,7 +133,7 @@ function lsreg(X, Y, lmb, regweights)
         return svdlsreg(X,Y,lmb)
     end
     m = size(Y,2)
-    A = sqrt(lmb) * diagm(sqrt.(regweights))
+    A = sqrt(lmb) * LinearAlgebra.diagm(0=>sqrt.(regweights))
     Xh = [X; A]
     Yh = [Y; zeros(d,m)]
     theta = ls(Xh,Yh)

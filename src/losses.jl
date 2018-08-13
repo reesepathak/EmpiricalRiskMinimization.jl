@@ -370,7 +370,7 @@ end
 "`SigmoidLoss()` constructs the sigmoid loss for classification problems. Use with `Model()`"
 struct SigmoidLoss <: LossDiff end
 
-loss(L::SigmoidLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(1./(1 + exp.(yhat.*y)))
+loss(L::SigmoidLoss, yhat::Array{Float64,1}, y::Array{Float64,1}) = sum(1 ./(1 + exp.(yhat.*y)))
 
 function derivloss(L::SigmoidLoss, yhat::Array{Float64,1}, y::Array{Float64,1})
     return -(y.*exp.(yhat.*y))./(1 + exp.(yhat.*y))./(1 + exp.(yhat.*y))
